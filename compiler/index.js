@@ -3,6 +3,7 @@ const { writeFileSync } = require('fs');
 const { ordinal } = require('./modules/ordinal');
 const date = require('date-and-time');
 const { gitToJs } = require('git-parse');
+const { minify } = require('luamin');
 
 const today = new Date()
 var bundledLua = bundle('./corvette.lua', {
@@ -25,5 +26,6 @@ var bundledLua = bundle('./corvette.lua', {
             return value
         }
     })
+    bundledLua = minify(bundledLua)
     writeFileSync('./corvette-build.lua', bundledLua)
 })()

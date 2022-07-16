@@ -1,0 +1,1 @@
+ss = render.get_screen_size()
