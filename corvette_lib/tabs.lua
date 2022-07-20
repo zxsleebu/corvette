@@ -25,14 +25,15 @@ tabs = {
             groups = {},
         }
         for _, group in ipairs(groups) do
-            tab.groups[group] = {
+            local g = group:gsub(" ", "_")
+            tab.groups[g] = {
                 name = group,
                 elements = {},
                 tab = tab,
                 menu_name = tab.name .. " > " .. group,
             }
-            setmetatable(tab.groups[group], tabs.__group_mt)
-            menu.set_group_column(tab.groups[group].menu_name, 2)
+            setmetatable(tab.groups[g], tabs.__group_mt)
+            menu.set_group_column(tab.groups[g].menu_name, 2)
         end
         setmetatable(tab, tabs.__tab_mt)
         local elements = tabs.switcher:get_items()
@@ -90,6 +91,13 @@ elements = {
         },
         __index = function(s, name)
             local raw = rawget(elements.mt.__rawindex, name)
+            if name:sub(1, 4) == "add_" then
+                return function(elem, ...)
+                    local el = elements.new(s.el[name](elem.el, ...))
+                    el:master(s)
+                    return el
+                end
+            end
             if not raw then
                 if s.el[name] then
                     return function(elem, ...)

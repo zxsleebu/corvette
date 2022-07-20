@@ -1,0 +1,8 @@
+require("corvette_lib/essentials")
+require("corvette_lib/tabs")
+require("corvette_lib/ui")
+require("corvette_lib/entity")
+require("corvette_lib/globals")
+require("corvette_lib/vec")
+require("corvette_lib/color")
+require("corvette_lib/render")

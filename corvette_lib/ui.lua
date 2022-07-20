@@ -15,6 +15,10 @@ ui = {
             exploits = {
                 doubletap = 0,
                 hideshots = 0,
+            },
+            misc = {
+                autopeek = 0,
+                autopeek_mode = 0,
             }
         }
     },
@@ -53,6 +57,9 @@ ui = {
         main = {
             movement = {
                 slow_walk = 0
+            },
+            config = {
+                accent_color = 0,
             }
         }
     }

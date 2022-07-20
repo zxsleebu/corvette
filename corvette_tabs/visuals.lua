@@ -1,0 +1,212 @@
+local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
+do
+    local logo_font = render.create_font("Terminal", 14, 300, e_font_flags.OUTLINE)
+    local text_font = render.create_font("Smallest Pixel-7", 11, 300, e_font_flags.OUTLINE)
+    local add = function(name, condition)
+        return {
+            name = name,
+            condition = condition,
+            size = 0,
+            alpha = 0,
+            margin = 0,
+            active = false,
+        }
+    end
+    local bind_ind = function(reference)
+        return function() return reference:get() end
+    end
+    local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other", "general"}
+    local get_active_weapon = function()
+        return ragebot_tabs[ragebot.get_active_cfg() + 1]
+    end
+    local indicators = {
+        add("dt", bind_ind(ui.aimbot.general.exploits.doubletap)),
+        add("os", bind_ind(ui.aimbot.general.exploits.hideshots)),
+        add("baim", function()
+            return menu.find("aimbot", get_active_weapon(), "target overrides", "force hitbox")[2]:get()
+        end),
+        add(function()
+            return "dmg: " .. menu.find("aimbot", get_active_weapon(), "target overrides", "force min. damage")[1]:get()
+        end, function()
+            return menu.find("aimbot", get_active_weapon(), "target overrides", "force min. damage")[2]:get()
+        end),
+        add("sp", function()
+            return menu.find("aimbot", get_active_weapon(), "target overrides", "force safepoint")[2]:get()
+        end),
+    }
+    local m_indicators = t_visuals.indicators:add_checkbox("enable", true)
+    local m_indicators_color = m_indicators:add_color_picker("color", ui.misc.main.config.accent_color:get())
+    m_indicators:callback(e_callbacks.PAINT, function ()
+        local pos = ss / 2 + vec2_t(2, 20)
+        local primary_color = m_indicators_color:get()
+        local secondary_color = color_t(200, 200, 200)
+        render.gradient_text(logo_font, "corvette", pos + vec2_t(3, 0),
+            {secondary_color, primary_color, secondary_color}, false,
+            function(symbol, size)
+                if symbol == "t" or symbol == "r" then
+                    return size + 1 end
+            end)
+        local lp = entity_list.get_local_player()
+        local movement_type = lp:get_movement_type() or "none"
+        local mode = "*" .. movement_type .. "*"
+        render.text(text_font, mode, pos + vec2_t(0, 4), primary_color)
+
+        --yeah, this is ugly, but it works
+        --waiting for senry to rewrite this shit ass code
+        local width = 0
+        local margin = 4
+        local last_active_was_parsed = false
+        for i = #indicators, 1, -1 do
+            local last_active = false
+            width = width + indicators[i].size
+            indicators[i].active = indicators[i].condition()
+            if indicators[i].active and not last_active_was_parsed then
+                last_active_was_parsed = true
+                last_active = true
+            end
+            indicators[i].margin =
+                essentials.anim(indicators[i].margin, (indicators[i].active and not last_active) and margin or 0)
+            
+        end
+        local x = 0
+        for i = 1, #indicators do
+            local ind = indicators[i]
+            local active = ind.condition()
+            local name = type(ind.name) == "function" and ind.name() or ind.name
+            local size = render.get_text_size(text_font, name).x + math.ceil(ind.margin)
+            indicators[i].size = essentials.anim(ind.size, active and size or 0)
+            indicators[i].alpha = essentials.anim(ind.alpha, active and 255 or 0)
+            render.text(text_font, name, pos + vec2_t(x, 13), color_t(255, 255, 255, math.ceil(ind.alpha)))
+            x = x + math.ceil(indicators[i].size)
+        end
+    end)
+end
+
+local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
+local m_autopeek_color_stand = m_autopeek:add_color_picker("stand")
+local m_autopeek_color_return = m_autopeek:add_color_picker("return", color_t(223, 255, 143))
+local m_autopeek_style = t_visuals.general:add_selection("style", {"neverlose", "gamesex"})
+local m_autopeek_radius = t_visuals.general:add_slider("radius", 10, 30):master(m_autopeek)
+m_autopeek_style:master(m_autopeek)
+do
+    local col = ui.aimbot.general.misc.autopeek_mode:get()
+    m_autopeek_color_stand:set(col:alpha(m_autopeek_color_stand:get().a))
+    ui.aimbot.general.misc.autopeek_mode:set(col:alpha(0))
+end
+do
+    local autopeeks = {}
+    local autopeek_mode = menu.find("aimbot", "general", "misc", "autopeek mode")[1]
+    local movement_buttons = {
+        moveright = 0,
+        moveleft = 0,
+        back = 0,
+        forward = 0,
+    }
+    for k, _ in pairs(movement_buttons) do
+        movement_buttons[k] = input.find_key_bound_to_binding(k)
+    end
+    local shot = false
+    m_autopeek:callback(e_callbacks.SETUP_COMMAND, function()
+        local lp = entity_list.get_local_player()
+        if autopeek_mode:get() == 2 then return end
+        local active = false
+        if lp:get_velocity() > 5 then
+            active = true end
+        for _, v in pairs(movement_buttons) do
+            if input.is_key_held(v) then active = false end
+        end
+        if shot then active = true end
+        local a = autopeeks[#autopeeks]
+        if a and a.active then
+            if lp:get_render_origin():dist(a.pos) < 20 then
+                active, shot = false, false
+            end
+            a.fade = essentials.anim(a.fade, active and 255 or 0)
+        end
+    end)
+    m_autopeek:callback(e_callbacks.EVENT, function (event)
+        if event.name ~= "weapon_fire" then return end
+        if entity_list.get_player_from_userid(event.userid) ~= entity_list.get_local_player() then return end
+        shot = true
+    end)
+    m_autopeek:callback(e_callbacks.PAINT, function()
+        local pos = ragebot.get_autopeek_pos()
+        local active = ui.aimbot.general.misc.autopeek:get()
+        local col_stand = m_autopeek_color_stand:get() ---@type color_t
+        local col_return = m_autopeek_color_return:get() ---@type color_t
+        local radius = m_autopeek_radius:get()
+        if autopeek_mode:get() == 2 then
+            local lp = entity_list.get_local_player()
+            local a = autopeeks[#autopeeks]
+            if a and a.active then
+                if lp:get_render_origin():dist(a.pos) < 20 then
+                    shot = false end
+                a.fade = essentials.anim(a.fade, shot and 255 or 0)
+            end
+        end
+
+        local render_circle = render.circle_3d
+        if m_autopeek_style:get() == 2 then
+            render_circle = function (pos, points, radius, in_col, out_col)
+                local step = 0.04
+                points = radius * 1.5
+                local color = in_col:alpha(math.ceil(in_col.a / 10))
+                for i = 0.1, 1, step do
+                    render.circle_3d(pos, clamp(points * i, 15, points), radius * i, color:alpha(math.ceil(color.a / i)))
+                end
+            end
+        end
+
+        local included = false
+        for i = 1, #autopeeks do
+            pcall(function()
+                local a = autopeeks[i]
+                if not a then return end
+                if not active then
+                    a.active = false end
+                if a.pos == pos and a.active then
+                    included = true end
+                a.alpha = essentials.anim(a.alpha, a.active and 255 or 0)
+                a.radius = essentials.anim(a.radius, a.active and radius or 0)
+                local col = col_stand:fade(col_return, a.fade / 255)
+                render_circle(a.pos,
+                    50,
+                    math.ceil(a.radius * 10) / 10,
+                    col:alpha(math.ceil(a.alpha / 3)),
+                    col:alpha(math.ceil(a.alpha))
+                )
+                if a.alpha <= 1 or a.radius <= 1 then
+                    table.remove(autopeeks, i) end
+            end)
+        end
+        if not included and pos then
+            table.insert(autopeeks, {
+                active = true,
+                pos = pos,
+                alpha = 0,
+                radius = 0,
+                fade = 0,
+            })
+        end
+    end)
+end
+
+t_visuals.esp:add_text("soon")
+local m_animfucker = t_visuals.local_player:add_multi_selection("animfix corrector", {
+    "reversed legs",
+    "static legs in air",
+    "pitch 0 on land",
+    "body leaning"
+})
+callbacks.add(e_callbacks.ANTIAIM, function(ctx)
+    local lp = entity_list.get_local_player()
+	if m_animfucker:get(1) then
+		ctx:set_render_pose(e_poses.RUN, 0)
+	end
+    if m_animfucker:get(4) and lp:get_velocity() > 3 then
+        ctx:set_render_animlayer(e_animlayers.LEAN, 1)
+    end
+    if m_animfucker:get(2) then
+        ctx:set_render_pose(e_poses.JUMP_FALL, 1)
+    end
+end)
