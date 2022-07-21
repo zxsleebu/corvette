@@ -19,24 +19,33 @@ do
     local get_active_weapon = function()
         return ragebot_tabs[ragebot.get_active_cfg() + 1]
     end
+    local target_overrides = function(name)
+        return function()
+            local weapon = get_active_weapon()
+            if not weapon then return end
+            local el = menu.find("aimbot", weapon, "target overrides", name)
+            if not el then return end
+            return el[2]:get()
+        end
+    end
     local indicators = {
         add("dt", bind_ind(ui.aimbot.general.exploits.doubletap)),
         add("os", bind_ind(ui.aimbot.general.exploits.hideshots)),
-        add("baim", function()
-            return menu.find("aimbot", get_active_weapon(), "target overrides", "force hitbox")[2]:get()
-        end),
+        add("baim", target_overrides("force hitbox")),
         add(function()
-            return "dmg: " .. menu.find("aimbot", get_active_weapon(), "target overrides", "force min. damage")[1]:get()
-        end, function()
-            return menu.find("aimbot", get_active_weapon(), "target overrides", "force min. damage")[2]:get()
-        end),
-        add("sp", function()
-            return menu.find("aimbot", get_active_weapon(), "target overrides", "force safepoint")[2]:get()
-        end),
+            local weapon = get_active_weapon()
+            if not weapon then return "dmg" end
+            local el = menu.find("aimbot", weapon, "target overrides", "force min. damage")
+            if not el then return "dmg" end
+            return "dmg: " .. el[1]:get()
+        end, target_overrides("force min. damage")),
+        add("sp", target_overrides("force safepoint")),
     }
     local m_indicators = t_visuals.indicators:add_checkbox("enable", true)
     local m_indicators_color = m_indicators:add_color_picker("color", ui.misc.main.config.accent_color:get())
     m_indicators:callback(e_callbacks.PAINT, function ()
+        local lp = entity_list.get_local_player()
+        if not lp or not lp:is_alive() then return end
         local pos = ss / 2 + vec2_t(2, 20)
         local primary_color = m_indicators_color:get()
         local secondary_color = color_t(200, 200, 200)
@@ -46,7 +55,6 @@ do
                 if symbol == "t" or symbol == "r" then
                     return size + 1 end
             end)
-        local lp = entity_list.get_local_player()
         local movement_type = lp:get_movement_type() or "none"
         local mode = "*" .. movement_type .. "*"
         render.text(text_font, mode, pos + vec2_t(0, 4), primary_color)
@@ -71,13 +79,15 @@ do
         local x = 0
         for i = 1, #indicators do
             local ind = indicators[i]
-            local active = ind.condition()
+            local err, active = pcall(ind.condition)
             local name = type(ind.name) == "function" and ind.name() or ind.name
             local size = render.get_text_size(text_font, name).x + math.ceil(ind.margin)
             indicators[i].size = essentials.anim(ind.size, active and size or 0)
             indicators[i].alpha = essentials.anim(ind.alpha, active and 255 or 0)
-            render.text(text_font, name, pos + vec2_t(x, 13), color_t(255, 255, 255, math.ceil(ind.alpha)))
-            x = x + math.ceil(indicators[i].size)
+            if indicators[i].size >= 1 and indicators[i].alpha >= 1 then
+                render.text(text_font, name, pos + vec2_t(x, 13), color_t(255, 255, 255, math.ceil(ind.alpha)))
+                x = x + math.ceil(indicators[i].size)
+            end
         end
     end)
 end

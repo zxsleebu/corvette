@@ -1,5 +1,5 @@
 require("corvette_lib/ui")
-ffi.cdef[[
+ffi.cdef([[
     typedef struct{ float x; float y; float z; } Vector_t;
     typedef struct{ float x; float y; } Vector2_t;
     typedef struct {
@@ -102,7 +102,7 @@ ffi.cdef[[
         float flAimPitchMax;
         int	 nAnimstateModelVersion;
     } c_animstate_t;
-]]
+]])
 
 ---@param s entity_t
 ---@param vector boolean|nil
