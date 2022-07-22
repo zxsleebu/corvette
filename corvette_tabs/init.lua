@@ -1,4 +1,4 @@
-tabs.setup("corvette", ([[
+tabs.setup("pantera", ([[
 corvette: version @BUILD_VERSION@
 user: %s
 build on: @BUILD_DATE@

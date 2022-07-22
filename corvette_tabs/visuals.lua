@@ -1,7 +1,7 @@
 local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
 do
-    local logo_font = render.create_font("Terminal", 14, 300, e_font_flags.OUTLINE)
-    local text_font = render.create_font("Smallest Pixel-7", 11, 300, e_font_flags.OUTLINE)
+    local logo_font = render.create_font("Verdana", 12, 600, e_font_flags.DROPSHADOW)
+    local text_font = render.create_font("Smallest Pixel-7", 8, 100, e_font_flags.DROPSHADOW)
     local add = function(name, condition)
         return {
             name = name,
@@ -28,36 +28,56 @@ do
             return el[2]:get()
         end
     end
+
+    local m_widgets = t_visuals.indicators:add_multi_selection("widgets", {"watermark", "keybinds", "spectators", "slowed down"})
+
     local indicators = {
-        add("dt", bind_ind(ui.aimbot.general.exploits.doubletap)),
-        add("os", bind_ind(ui.aimbot.general.exploits.hideshots)),
-        add("baim", target_overrides("force hitbox")),
+        add("DT", bind_ind(ui.aimbot.general.exploits.doubletap)),
+        add("OS", bind_ind(ui.aimbot.general.exploits.hideshots)),
+        add("BAIM", target_overrides("force hitbox")),
         add(function()
             local weapon = get_active_weapon()
-            if not weapon then return "dmg" end
+            if not weapon then return "DMG" end
             local el = menu.find("aimbot", weapon, "target overrides", "force min. damage")
-            if not el then return "dmg" end
-            return "dmg: " .. el[1]:get()
+            if not el then return "DMG" end
+            return "DMG: " .. el[1]:get()
         end, target_overrides("force min. damage")),
-        add("sp", target_overrides("force safepoint")),
+        add("SP", target_overrides("force safepoint")),
     }
-    local m_indicators = t_visuals.indicators:add_checkbox("enable", true)
+
+    local ind_add_x = 0
+    local m_indicators = t_visuals.indicators:add_checkbox("indicators under crosshair", true)
     local m_indicators_color = m_indicators:add_color_picker("color", ui.misc.main.config.accent_color:get())
+
     m_indicators:callback(e_callbacks.PAINT, function ()
         local lp = entity_list.get_local_player()
         if not lp or not lp:is_alive() then return end
-        local pos = ss / 2 + vec2_t(2, 20)
+        local pos = ss / 2 + vec2_t(0, 35)
         local primary_color = m_indicators_color:get()
-        local secondary_color = color_t(200, 200, 200)
-        render.gradient_text(logo_font, "corvette", pos + vec2_t(3, 0),
-            {secondary_color, primary_color, secondary_color}, false,
-            function(symbol, size)
-                if symbol == "t" or symbol == "r" then
-                    return size + 1 end
-            end)
-        local movement_type = lp:get_movement_type() or "none"
-        local mode = "*" .. movement_type .. "*"
-        render.text(text_font, mode, pos + vec2_t(0, 4), primary_color)
+        local secondary_color = color_t(0, 0, 0, 80)
+        local m_text = "pantera" 
+        ind_add_x = essentials.anim(ind_add_x, lp:get_prop("m_bIsScoped") == 1 and 30 or 0)
+
+        local x = 0
+        x = x - render.get_text_size(logo_font, m_text).x / 2
+
+        for idx = 1, #m_text do
+            local m_letter = m_text:sub(idx, idx);
+            local m_letter_size = render.get_text_size(logo_font, m_letter);
+        
+            local alpha = idx / #m_text;
+            local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * 1.4 % (math.pi * 2)))
+            
+            local color = essentials.color_lerp(primary_color, secondary_color, anim)
+
+            render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(ind_add_x), -8), color)
+
+            x = x + m_letter_size.x;
+        end
+
+        local movement_type = lp:get_movement_type() or "NONE"
+        local mode = "~" .. movement_type .. "~"
+        render.text(text_font, string.upper(mode), pos + vec2_t(-render.get_text_size(text_font, string.upper(mode)).x / 2 + math.ceil(ind_add_x), 5), primary_color)
 
         --yeah, this is ugly, but it works
         --waiting for senry to rewrite this shit ass code
@@ -76,24 +96,24 @@ do
                 essentials.anim(indicators[i].margin, (indicators[i].active and not last_active) and margin or 0)
             
         end
-        local x = 0
+        local y = 0
         for i = 1, #indicators do
             local ind = indicators[i]
             local err, active = pcall(ind.condition)
             local name = type(ind.name) == "function" and ind.name() or ind.name
-            local size = render.get_text_size(text_font, name).x + math.ceil(ind.margin)
-            indicators[i].size = essentials.anim(ind.size, active and size or 0)
+            local size = render.get_text_size(text_font, name)
+            indicators[i].size = essentials.anim(ind.size, active and size.y - 1 or 0)
             indicators[i].alpha = essentials.anim(ind.alpha, active and 255 or 0)
             if indicators[i].size >= 1 and indicators[i].alpha >= 1 then
-                render.text(text_font, name, pos + vec2_t(x, 13), color_t(255, 255, 255, math.ceil(ind.alpha)))
-                x = x + math.ceil(indicators[i].size)
+                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ind_add_x), 14 + y), color_t(255, 255, 255, math.ceil(ind.alpha)))
+                y = y + math.ceil(indicators[i].size)
             end
         end
     end)
 end
 
 local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
-local m_autopeek_color_stand = m_autopeek:add_color_picker("stand")
+local m_autopeek_color_stand = m_autopeek:add_color_picker("stand", color_t(255, 255, 255))
 local m_autopeek_color_return = m_autopeek:add_color_picker("return", color_t(223, 255, 143))
 local m_autopeek_style = t_visuals.general:add_selection("style", {"neverlose", "gamesex"})
 local m_autopeek_radius = t_visuals.general:add_slider("radius", 10, 30):master(m_autopeek)

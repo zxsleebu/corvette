@@ -34,6 +34,24 @@ essentials = {
         t = essentials.get_anim_time(t)
         return a + (b - a) * t
     end,
+    lerp = function(x, v, t)
+        local delta = v - x;
+        if type(delta) == 'number' then
+            if math.abs(delta) < 0.005 then
+                return v
+            end
+        end
+      
+        return delta * t + x
+    end,
+    color_lerp = function(clr1, clr2, percent)
+        return color_t(
+            math.floor(essentials.lerp(clr1.r, clr2.r, percent)),
+            math.floor(essentials.lerp(clr1.g, clr2.g, percent)),
+            math.floor(essentials.lerp(clr1.b, clr2.b, percent)),
+            math.floor(essentials.lerp(clr1.a, clr2.a, percent))
+        )
+    end,
 }
 clamp = function(val, min, max)
     return math.max(min, math.min(max, val))
