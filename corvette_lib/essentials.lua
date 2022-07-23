@@ -9,6 +9,9 @@ string.split = function(s, sep)
         table.insert(t, str) end
     return t
 end
+
+local widgets = {}
+
 essentials = {
     ---@param only_charged boolean|nil
     ---@return "dt"|"hs"|false
@@ -52,7 +55,42 @@ essentials = {
             math.floor(essentials.lerp(clr1.a, clr2.a, percent))
         )
     end,
+    draggable = function(x, y, size, name)
+        return {
+            position_x = x,
+            position_y = y,
+            size_x = size.x,
+            size_y = size.y,
+            started_dragging = false,
+            initial_drag_pos = vec2_t(0, 0),
+    
+            drag = function (self, size)
+                self.size_x = size.x or self.size_x
+                self.size_y = size.y or self.size_y
+
+                if menu.is_open() then
+                    local mouse_position = input.get_mouse_pos()
+                    local in_bounds = input.is_mouse_in_bounds(vec2_t(self.position_x:get(), self.position_y:get()), vec2_t(self.size_x, self.size_y))
+                    if (in_bounds or self.started_dragging) and input.is_key_held(e_keys.MOUSE_LEFT) and (widgets.mouse_target == "" or widgets.mouse_target == name) then
+                        widgets.mouse_target = name
+                        if not self.started_dragging then
+                            self.started_dragging = true
+                            self.initial_drag_pos = vec2_t(mouse_position.x - self.position_x:get(), mouse_position.y - self.position_y:get())
+                        else
+                            self.position_x:set(math.ceil(mouse_position.x - self.initial_drag_pos.x))
+                            self.position_y:set(math.ceil(mouse_position.y - self.initial_drag_pos.y))
+                        end
+                    elseif not input.is_key_held(e_keys.MOUSE_LEFT) then
+                        widgets.mouse_target = ""
+                        self.started_dragging = false
+                        self.initial_drag_pos = vec2_t(0, 0)
+                    end
+                end
+            end,
+        }
+    end
 }
+
 clamp = function(val, min, max)
     return math.max(min, math.min(max, val))
 end

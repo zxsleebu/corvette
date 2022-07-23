@@ -1,5 +1,5 @@
-tabs.setup("pantera", ([[
-corvette: version @BUILD_VERSION@
+tabs.setup("pantera.lua", ([[
+pantera: version @BUILD_VERSION@
 user: %s
 build on: @BUILD_DATE@
 ]]):format(user.name))

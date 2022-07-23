@@ -1,19 +1,27 @@
 local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
 do
+    local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
     local logo_font = render.create_font("Verdana", 12, 600, e_font_flags.DROPSHADOW)
     local text_font = render.create_font("Smallest Pixel-7", 8, 100, e_font_flags.DROPSHADOW)
-    local add = function(name, condition)
+    local add_ind = function(name, condition, category)
         return {
             name = name,
             condition = condition,
-            size = 0,
-            alpha = 0,
-            margin = 0,
-            active = false,
+            category = category,
+            anim = 0,
+        }
+    end
+    local add_bind = function(name, reference)
+        return {
+            name = name,
+            reference = reference,
+            anim = 0,
         }
     end
     local bind_ind = function(reference)
-        return function() return reference:get() end
+        return function() 
+            return reference 
+        end
     end
     local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other", "general"}
     local get_active_weapon = function()
@@ -25,38 +33,172 @@ do
             if not weapon then return end
             local el = menu.find("aimbot", weapon, "target overrides", name)
             if not el then return end
-            return el[2]:get()
+            return el[2]
         end
     end
 
-    local m_widgets = t_visuals.indicators:add_multi_selection("widgets", {"watermark", "keybinds", "spectators", "slowed down"})
-
-    local indicators = {
-        add("DT", bind_ind(ui.aimbot.general.exploits.doubletap)),
-        add("OS", bind_ind(ui.aimbot.general.exploits.hideshots)),
-        add("BAIM", target_overrides("force hitbox")),
-        add(function()
-            local weapon = get_active_weapon()
-            if not weapon then return "DMG" end
-            local el = menu.find("aimbot", weapon, "target overrides", "force min. damage")
-            if not el then return "DMG" end
-            return "DMG: " .. el[1]:get()
-        end, target_overrides("force min. damage")),
-        add("SP", target_overrides("force safepoint")),
+    local m_animations = {
+        indicators = {
+            add_x = 0
+        },
+        widgets = {
+            water = {width = 0},
+            binds = {width = 0, alpha = 0}
+        }
     }
 
-    local ind_add_x = 0
-    local m_indicators = t_visuals.indicators:add_checkbox("indicators under crosshair", true)
-    local m_indicators_color = m_indicators:add_color_picker("color", ui.misc.main.config.accent_color:get())
+    local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
+    local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local m_features = t_visuals.indicators:add_multi_selection("features", {"name", "fps", "latency", "tickrate", "time", "seconds"})
+    m_features:master(m_watermark)
+
+    m_watermark:callback(e_callbacks.PAINT, function ()
+        local pos = vec2_t(500, 11)
+        local size = vec2_t(500, 17)
+        local color = m_watermark_color:get()
+        local hours, min, sec = client.get_local_time()
+        local time = (hours < 10 and "0" .. hours or hours) .. ":" .. (min < 10 and "0" .. min or min);
+        local seconds = ":" .. (sec < 10 and "0" .. sec or sec)
+        local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
+        local watermark_text = {"pant", "era.lua"}
+        local watermark_textsize = render.get_text_size(widgets_font, watermark_text[1] .. watermark_text[2])
+        local text = ""
+
+        local text_adding = {user.name, "fps: " .. client.get_fps(), "delay: " .. latency .. "ms", string.format("%dtick",client.get_tickrate()), time, seconds}
+
+        if m_features:get(1) then text = text .. "  " .. text_adding[1] end
+        if m_features:get(2) then text = text .. "  " .. text_adding[2] end
+        if m_features:get(3) and engine.is_connected() then text = text .. "  " .. text_adding[3] end
+        if m_features:get(4) and engine.is_connected() then text = text .. "  " .. text_adding[4] end
+        if m_features:get(5) then text = text .. "  " .. text_adding[5] end
+        if m_features:get(5) and m_features:get(6) then text = text .. text_adding[6] end
+
+        local textsize = render.get_text_size(widgets_font, watermark_text[1] .. watermark_text[2] .. text)
+
+        m_animations.widgets.water.width = essentials.anim(m_animations.widgets.water.width, textsize.x + 9)
+        size.x = math.ceil(m_animations.widgets.water.width)
+        pos.x = ss.x - size.x - 11
+
+        render.solus_container(pos, size, color, 1, 3)
+        render.text(widgets_font, watermark_text[1], pos + vec2_t(5, 2), color_t(255, 255, 255, 255))
+        render.text(widgets_font, watermark_text[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_text[1]).x, 2), color_t(color.r, color.g, color.b, 255))
+        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255, 255))
+    end)
+
+    local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
+    local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
+    local m_keybinds_x = t_visuals.indicators:add_slider("x", 0, ss.x, "keybinds")
+    local m_keybinds_y = t_visuals.indicators:add_slider("y", 0, ss.y, "keybinds")
+
+    m_keybinds_x:set_visible(false)
+    m_keybinds_y:set_visible(false)
+
+    local bindlist = {
+        add_bind("Force hitchance", target_overrides("force hitchance")),
+        add_bind("Force body lean safepoint", target_overrides("force body lean safepoint")),
+        add_bind("Force lethal shot", target_overrides("force lethal shot")),
+        add_bind("Force safe point", target_overrides("force safepoint")),
+        add_bind("Force body aim", target_overrides("force hitbox")),
+        add_bind("Minimum damage", target_overrides("force min. damage")),
+        add_bind("Double tap", bind_ind(ui.aimbot.general.exploits.doubletap)),
+        add_bind("Override resolver", bind_ind(ui.aimbot.general.aimbot.override_resolver)),
+        add_bind("Body lean resolver", bind_ind(ui.aimbot.general.aimbot.body_lean_resolver)),
+        add_bind("On shot anti-aim", bind_ind(ui.aimbot.general.exploits.hideshots)),
+        add_bind("Quick peek assist", bind_ind(ui.aimbot.general.misc.autopeek)),
+        add_bind("Body lean inverter", bind_ind(ui.antiaim.main.manual.invert_body_lean)),
+        add_bind("Desync inverter", bind_ind(ui.antiaim.main.manual.invert_desync)),
+        add_bind("Extended angles", bind_ind(ui.antiaim.main.extended_angles.enable)),
+        add_bind("Freestanding", bind_ind(ui.antiaim.main.auto_direction.enable)),
+        add_bind("Lock angle", bind_ind(ui.antiaim.main.general.lock_angle)),
+        add_bind("Ping spike", bind_ind(ui.aimbot.general.fake_ping.enable)),
+        add_bind("Slow motion", bind_ind(ui.misc.main.movement.slow_walk)),
+        add_bind("Jump at edge", bind_ind(ui.misc.main.movement.edge_jump)),
+        add_bind("Jump at bug", bind_ind(ui.misc.main.movement.jump_bug)),
+        add_bind("Edge bug helper", bind_ind(ui.misc.main.movement.edge_bug_helper)),
+        add_bind("Sneak", bind_ind(ui.misc.main.movement.sneak)),
+    }
+
+    local m_keybinds_draggable = essentials.draggable(m_keybinds_x, m_keybinds_y, vec2_t(70, 17), "keybinds")
+
+    m_keybinds:callback(e_callbacks.PAINT, function ()
+        local modes = {"[toggled]", "[holding]", "[holding off]", "[always]", "[disabled]"}
+        local pos = vec2_t(m_keybinds_x:get(), m_keybinds_y:get())
+        local resize = {width = 20, minwidth = 0}
+        local size = vec2_t(70, 17)
+        local color = m_keybinds_color:get()
+        local text = "keybinds"
+        local plus = 0
+        local h = {}
+
+        for i = 1, #bindlist do
+            local err, condition = pcall(bindlist[i].reference)
+            if condition ~= nil then
+                local active = condition:get()
+                local name = bindlist[i].name
+                local mode = modes[condition:get_mode() + 1]     
+                bindlist[i].anim = essentials.anim(bindlist[i].anim, active and 1 or 0, 20)
+                if active then h[#h+1] = i end
+
+                if bindlist[i].anim > 0.08 then
+                    local offset_y = size.y + 2 + (14 * plus)
+
+                    render.push_alpha_modifier(bindlist[i].anim)
+                    render.text(widgets_font, name, pos + vec2_t(5, offset_y), color_t(255, 255, 255, 255))
+                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(m_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
+                    render.pop_alpha_modifier()
+
+                    plus = plus + bindlist[i].anim
+
+                    if render.get_text_size(widgets_font, name .. mode).x > resize.minwidth then
+                        resize.minwidth = render.get_text_size(widgets_font, name .. mode).x
+                    end
+                end
+            end
+        end
+
+        m_animations.widgets.binds.alpha = essentials.anim(m_animations.widgets.binds.alpha, (#h > 0 or menu.is_open()) and 1 or 0, 20)
+
+        resize.width = resize.width + resize.minwidth
+        if resize.width < m_keybinds_min_width:get() then resize.width = m_keybinds_min_width:get() end
+        m_animations.widgets.binds.width = essentials.anim(m_animations.widgets.binds.width, resize.width)
+        size.x = math.ceil(m_animations.widgets.binds.width)
+
+        if m_animations.widgets.binds.alpha > 0.08 then
+            render.solus_container(pos, size, color, m_animations.widgets.binds.alpha, 3)
+            render.push_alpha_modifier(m_animations.widgets.binds.alpha)
+            render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 2), color_t(255, 255, 255, 255))
+            render.pop_alpha_modifier()
+            m_keybinds_draggable:drag(vec2_t(m_animations.widgets.binds.width, size.y))
+        end
+    end)
+
+    local indicators = {
+        add_ind("DTAP", bind_ind(ui.aimbot.general.exploits.doubletap)),
+        add_ind("ONSHOT", bind_ind(ui.aimbot.general.exploits.hideshots)),
+        add_ind("BAIM", target_overrides("force hitbox")),
+        add_ind(function()
+            local weapon = get_active_weapon()
+            if not weapon then return "DAMAGE" end
+            local el = menu.find("aimbot", weapon, "target overrides", "force min. damage")
+            if not el then return "DAMAGE" end
+            return "DAMAGE: " .. el[1]:get()
+        end, target_overrides("force min. damage")),
+        add_ind("SPOINT", target_overrides("force safepoint")),
+    }
+
+    local m_indicators = t_visuals.indicators:add_checkbox("under crosshair", true)
+    local m_indicators_first_color = m_indicators:add_color_picker("first_color", ui.misc.main.config.accent_color:get())
+    local m_indicators_second_color = m_indicators:add_color_picker("second_color", color_t(0, 0, 0, 124))
 
     m_indicators:callback(e_callbacks.PAINT, function ()
         local lp = entity_list.get_local_player()
         if not lp or not lp:is_alive() then return end
         local pos = ss / 2 + vec2_t(0, 35)
-        local primary_color = m_indicators_color:get()
-        local secondary_color = color_t(0, 0, 0, 80)
-        local m_text = "pantera" 
-        ind_add_x = essentials.anim(ind_add_x, lp:get_prop("m_bIsScoped") == 1 and 30 or 0)
+        local primary_color = m_indicators_first_color:get()
+        local secondary_color = m_indicators_second_color:get()
+        local m_text = "~pantera~"
+        m_animations.indicators.add_x = essentials.anim(m_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 40 or 0)
 
         local x = 0
         x = x - render.get_text_size(logo_font, m_text).x / 2
@@ -70,43 +212,34 @@ do
             
             local color = essentials.color_lerp(primary_color, secondary_color, anim)
 
-            render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(ind_add_x), -8), color)
+            render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(m_animations.indicators.add_x), -8), color)
 
             x = x + m_letter_size.x;
         end
-
-        local movement_type = lp:get_movement_type() or "NONE"
+        -- @note зачем я нахуй тут оставил render.arc(vec2_t(500, 500), -180, -90, 40, 4, 1, color_t(255, 255, 255, 255))
+--[[         local movement_type = lp:get_movement_type() or "NONE"
         local mode = "~" .. movement_type .. "~"
-        render.text(text_font, string.upper(mode), pos + vec2_t(-render.get_text_size(text_font, string.upper(mode)).x / 2 + math.ceil(ind_add_x), 5), primary_color)
-
+        render.text(text_font, string.upper(mode), pos + vec2_t(-render.get_text_size(text_font, string.upper(mode)).x / 2 + math.ceil(m_animations.indicators.add_x), 5), primary_color)
+ ]]
         --yeah, this is ugly, but it works
         --waiting for senry to rewrite this shit ass code
-        local width = 0
-        local margin = 4
-        local last_active_was_parsed = false
-        for i = #indicators, 1, -1 do
-            local last_active = false
-            width = width + indicators[i].size
-            indicators[i].active = indicators[i].condition()
-            if indicators[i].active and not last_active_was_parsed then
-                last_active_was_parsed = true
-                last_active = true
-            end
-            indicators[i].margin =
-                essentials.anim(indicators[i].margin, (indicators[i].active and not last_active) and margin or 0)
-            
-        end
-        local y = 0
+
+        local plus = 0
         for i = 1, #indicators do
             local ind = indicators[i]
-            local err, active = pcall(ind.condition)
+            local err, condition = pcall(ind.condition)
+            local active = condition:get()
             local name = type(ind.name) == "function" and ind.name() or ind.name
             local size = render.get_text_size(text_font, name)
-            indicators[i].size = essentials.anim(ind.size, active and size.y - 1 or 0)
-            indicators[i].alpha = essentials.anim(ind.alpha, active and 255 or 0)
-            if indicators[i].size >= 1 and indicators[i].alpha >= 1 then
-                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ind_add_x), 14 + y), color_t(255, 255, 255, math.ceil(ind.alpha)))
-                y = y + math.ceil(indicators[i].size)
+            
+            indicators[i].anim = essentials.anim(indicators[i].anim, active and 1 or 0)
+            if indicators[i].anim > 0.08 then
+                local offset_y = 4 + (9 * plus)
+
+                render.push_alpha_modifier(indicators[i].anim)
+                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(m_animations.indicators.add_x), offset_y), color_t(255, 255, 255, 255))
+                render.pop_alpha_modifier()
+                plus = plus + indicators[i].anim
             end
         end
     end)
@@ -168,10 +301,12 @@ do
         if autopeek_mode:get() == 2 then
             local lp = entity_list.get_local_player()
             local a = autopeeks[#autopeeks]
-            if a and a.active then
-                if lp:get_render_origin():dist(a.pos) < 20 then
-                    shot = false end
-                a.fade = essentials.anim(a.fade, shot and 255 or 0)
+            if lp ~= nil then
+                if a and a.active then
+                    if lp:get_render_origin():dist(a.pos) < 20 then
+                        shot = false end
+                    a.fade = essentials.anim(a.fade, shot and 255 or 0)
+                end
             end
         end
 
@@ -239,4 +374,6 @@ callbacks.add(e_callbacks.ANTIAIM, function(ctx)
     if m_animfucker:get(2) then
         ctx:set_render_pose(e_poses.JUMP_FALL, 1)
     end
+
+--[[     ctx:set_render_pose(e_poses.BODY_PITCH, 0.5) ]]
 end)

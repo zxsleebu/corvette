@@ -1,4 +1,4 @@
-local t_antiaim = tabs.new("antiaim", {"general"})
+local t_antiaim = tabs.new("antiaim", {"general", "conditions"})
 
 m_antiaim_enable = nil
 do
@@ -10,6 +10,7 @@ do
         angles.jitter_mode:set(2)
         angles.jitter_type:set(2)
         angles.body_lean:set(1)
+        desync.stand.side:set(4)
         desync.move.side:set(4)
         desync.move.left_amount:set(99)
         desync.move.right_amount:set(99)
@@ -56,3 +57,5 @@ do
     end)
 end
 m_roll = t_antiaim.general:add_checkbox("roll"):master(m_antiaim_enable)
+
+t_antiaim.conditions:add_text("soon"):master(m_antiaim_enable)
