@@ -52,6 +52,7 @@ do
     local m_features = t_visuals.indicators:add_multi_selection("features", {"name", "fps", "latency", "tickrate", "time", "seconds"})
     m_features:master(m_watermark)
 
+    m_watermark:callback(e_callbacks.DRAW_WATERMARK, function (watermark_text) return end)
     m_watermark:callback(e_callbacks.PAINT, function ()
         local pos = vec2_t(500, 11)
         local size = vec2_t(500, 17)
@@ -363,6 +364,27 @@ local m_animfucker = t_visuals.local_player:add_multi_selection("animfix correct
     "pitch 0 on land",
     "body leaning"
 })
+
+local m_bOnLand, m_iGroundTicks, m_flEndTime = false, 0, 0
+
+callbacks.add(e_callbacks.SETUP_COMMAND, function()
+    local lp = entity_list.get_local_player()
+    if not lp then return end
+    local bOnGround = not lp:is_in_air()
+
+    if bOnGround then
+        m_iGroundTicks = m_iGroundTicks + 1
+    else
+        m_iGroundTicks = 0
+        m_flEndTime = global_vars.cur_time() + 1
+    end
+
+    m_bOnLand = false
+    if m_iGroundTicks > 10 and m_flEndTime > global_vars.cur_time() then
+        m_bOnLand = true
+    end
+end)
+
 callbacks.add(e_callbacks.ANTIAIM, function(ctx)
     local lp = entity_list.get_local_player()
 	if m_animfucker:get(1) then
@@ -374,6 +396,15 @@ callbacks.add(e_callbacks.ANTIAIM, function(ctx)
     if m_animfucker:get(2) then
         ctx:set_render_pose(e_poses.JUMP_FALL, 1)
     end
+    if m_animfucker:get(3) then
+        if m_bOnLand then
+            ctx:set_render_pose(e_poses.BODY_PITCH, 0.5)
+        end
+    end
+end)
 
---[[     ctx:set_render_pose(e_poses.BODY_PITCH, 0.5) ]]
+callbacks.add(e_callbacks.EVENT, function (event)
+    if event.name == "round_start" then
+        m_bOnLand, m_iGroundTicks, m_flEndTime = false, 0, 0
+    end
 end)
