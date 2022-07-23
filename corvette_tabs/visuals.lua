@@ -60,7 +60,7 @@ do
         local time = (hours < 10 and "0" .. hours or hours) .. ":" .. (min < 10 and "0" .. min or min);
         local seconds = ":" .. (sec < 10 and "0" .. sec or sec)
         local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
-        local watermark_text = {"pant", "era.lua"}
+        local watermark_text = {"corv", "ette.lua"}
         local watermark_textsize = render.get_text_size(widgets_font, watermark_text[1] .. watermark_text[2])
         local text = ""
 
@@ -197,8 +197,8 @@ do
         local pos = ss / 2 + vec2_t(0, 35)
         local primary_color = m_indicators_first_color:get()
         local secondary_color = m_indicators_second_color:get()
-        local m_text = "~pantera~"
-        m_animations.indicators.add_x = essentials.anim(m_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 40 or 0)
+        local m_text = "~corvette~"
+        m_animations.indicators.add_x = essentials.anim(m_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 45 or 0)
 
         local x = 0
         x = x - render.get_text_size(logo_font, m_text).x / 2
