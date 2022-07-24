@@ -1,6 +1,15 @@
 local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
+local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
+local ui_animations = {
+    indicators = {
+        add_x = 0
+    },
+    widgets = {
+        water = {width = 0},
+        binds = {width = 0, alpha = 0}
+    }
+}
 do
-    local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
     local logo_font = render.create_font("Verdana", 12, 600, e_font_flags.DROPSHADOW)
     local text_font = render.create_font("Smallest Pixel-7", 8, 100, e_font_flags.DROPSHADOW)
     local add_ind = function(name, condition, category)
@@ -23,7 +32,7 @@ do
             return reference 
         end
     end
-    local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other", "general"}
+    local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other"}
     local get_active_weapon = function()
         return ragebot_tabs[ragebot.get_active_cfg() + 1]
     end
@@ -36,55 +45,6 @@ do
             return el[2]
         end
     end
-
-    local m_animations = {
-        indicators = {
-            add_x = 0
-        },
-        widgets = {
-            water = {width = 0},
-            binds = {width = 0, alpha = 0}
-        }
-    }
-
-    local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
-    local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
-    local m_features = t_visuals.indicators:add_multi_selection("features", {"name", "fps", "latency", "tickrate", "time", "seconds"})
-    m_features:master(m_watermark)
-
-    m_watermark:callback(e_callbacks.DRAW_WATERMARK, function (watermark_text) return end)
-    m_watermark:callback(e_callbacks.PAINT, function ()
-        local pos = vec2_t(500, 11)
-        local size = vec2_t(500, 17)
-        local color = m_watermark_color:get()
-        local hours, min, sec = client.get_local_time()
-        local time = (hours < 10 and "0" .. hours or hours) .. ":" .. (min < 10 and "0" .. min or min);
-        local seconds = ":" .. (sec < 10 and "0" .. sec or sec)
-        local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
-        local watermark_text = {"corv", "ette.lua"}
-        local watermark_textsize = render.get_text_size(widgets_font, watermark_text[1] .. watermark_text[2])
-        local text = ""
-
-        local text_adding = {user.name, "fps: " .. client.get_fps(), "delay: " .. latency .. "ms", string.format("%dtick",client.get_tickrate()), time, seconds}
-
-        if m_features:get(1) then text = text .. "  " .. text_adding[1] end
-        if m_features:get(2) then text = text .. "  " .. text_adding[2] end
-        if m_features:get(3) and engine.is_connected() then text = text .. "  " .. text_adding[3] end
-        if m_features:get(4) and engine.is_connected() then text = text .. "  " .. text_adding[4] end
-        if m_features:get(5) then text = text .. "  " .. text_adding[5] end
-        if m_features:get(5) and m_features:get(6) then text = text .. text_adding[6] end
-
-        local textsize = render.get_text_size(widgets_font, watermark_text[1] .. watermark_text[2] .. text)
-
-        m_animations.widgets.water.width = essentials.anim(m_animations.widgets.water.width, textsize.x + 9)
-        size.x = math.ceil(m_animations.widgets.water.width)
-        pos.x = ss.x - size.x - 11
-
-        render.solus_container(pos, size, color, 1, 3)
-        render.text(widgets_font, watermark_text[1], pos + vec2_t(5, 2), color_t(255, 255, 255, 255))
-        render.text(widgets_font, watermark_text[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_text[1]).x, 2), color_t(color.r, color.g, color.b, 255))
-        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255, 255))
-    end)
 
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
     local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
@@ -146,7 +106,7 @@ do
 
                     render.push_alpha_modifier(bindlist[i].anim)
                     render.text(widgets_font, name, pos + vec2_t(5, offset_y), color_t(255, 255, 255, 255))
-                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(m_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
+                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
                     render.pop_alpha_modifier()
 
                     plus = plus + bindlist[i].anim
@@ -158,26 +118,26 @@ do
             end
         end
 
-        m_animations.widgets.binds.alpha = essentials.anim(m_animations.widgets.binds.alpha, (#h > 0 or menu.is_open()) and 1 or 0, 20)
+        ui_animations.widgets.binds.alpha = essentials.anim(ui_animations.widgets.binds.alpha, (#h > 0 or menu.is_open()) and 1 or 0, 20)
 
         resize.width = resize.width + resize.minwidth
         if resize.width < m_keybinds_min_width:get() then resize.width = m_keybinds_min_width:get() end
-        m_animations.widgets.binds.width = essentials.anim(m_animations.widgets.binds.width, resize.width)
-        size.x = math.ceil(m_animations.widgets.binds.width)
+        ui_animations.widgets.binds.width = essentials.anim(ui_animations.widgets.binds.width, resize.width)
+        size.x = math.ceil(ui_animations.widgets.binds.width)
 
-        if m_animations.widgets.binds.alpha > 0.08 then
-            render.solus_container(pos, size, color, m_animations.widgets.binds.alpha, 3)
-            render.push_alpha_modifier(m_animations.widgets.binds.alpha)
+        if ui_animations.widgets.binds.alpha > 0.08 then
+            render.solus_container(pos, size, color, ui_animations.widgets.binds.alpha, 3)
+            render.push_alpha_modifier(ui_animations.widgets.binds.alpha)
             render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 2), color_t(255, 255, 255, 255))
             render.pop_alpha_modifier()
-            m_keybinds_draggable:drag(vec2_t(m_animations.widgets.binds.width, size.y))
+            m_keybinds_draggable:drag(vec2_t(ui_animations.widgets.binds.width, size.y))
         end
     end)
 
     local indicators = {
-        add_ind("DTAP", bind_ind(ui.aimbot.general.exploits.doubletap)),
-        add_ind("ONSHOT", bind_ind(ui.aimbot.general.exploits.hideshots)),
-        add_ind("BAIM", target_overrides("force hitbox")),
+        add_ind("doubletap", bind_ind(ui.aimbot.general.exploits.doubletap)),
+        add_ind("onshot", bind_ind(ui.aimbot.general.exploits.hideshots)),
+        add_ind("baim", target_overrides("force hitbox")),
         add_ind(function()
             local weapon = get_active_weapon()
             if not weapon then return "DAMAGE" end
@@ -185,7 +145,7 @@ do
             if not el then return "DAMAGE" end
             return "DAMAGE: " .. el[1]:get()
         end, target_overrides("force min. damage")),
-        add_ind("SPOINT", target_overrides("force safepoint")),
+        add_ind("safepoint", target_overrides("force safepoint")),
     }
 
     local m_indicators = t_visuals.indicators:add_checkbox("under crosshair", true)
@@ -199,59 +159,126 @@ do
         local primary_color = m_indicators_first_color:get()
         local secondary_color = m_indicators_second_color:get()
         local m_text = "~corvette~"
-        m_animations.indicators.add_x = essentials.anim(m_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 45 or 0)
+        ui_animations.indicators.add_x = essentials.anim(ui_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 45 or 0)
 
         local x = 0
         x = x - render.get_text_size(logo_font, m_text).x / 2
 
         for idx = 1, #m_text do
-            local m_letter = m_text:sub(idx, idx);
-            local m_letter_size = render.get_text_size(logo_font, m_letter);
-        
-            local alpha = idx / #m_text;
+            local m_letter = m_text:sub(idx, idx)
+            local m_letter_size = render.get_text_size(logo_font, m_letter)
+
+            local alpha = idx / #m_text
             local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * 1.4 % (math.pi * 2)))
-            
+
             local color = essentials.color_lerp(primary_color, secondary_color, anim)
 
-            render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(m_animations.indicators.add_x), -8), color)
+            render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(ui_animations.indicators.add_x), -8), color)
 
-            x = x + m_letter_size.x;
+            x = x + m_letter_size.x
         end
-        -- @note зачем я нахуй тут оставил render.arc(vec2_t(500, 500), -180, -90, 40, 4, 1, color_t(255, 255, 255, 255))
---[[         local movement_type = lp:get_movement_type() or "NONE"
-        local mode = "~" .. movement_type .. "~"
-        render.text(text_font, string.upper(mode), pos + vec2_t(-render.get_text_size(text_font, string.upper(mode)).x / 2 + math.ceil(m_animations.indicators.add_x), 5), primary_color)
- ]]
-        --yeah, this is ugly, but it works
-        --waiting for senry to rewrite this shit ass code
 
         local plus = 0
         for i = 1, #indicators do
             local ind = indicators[i]
-            local err, condition = pcall(ind.condition)
-            local active = condition:get()
+            local condition = ind.condition()
+            local active = condition and condition:get()
             local name = type(ind.name) == "function" and ind.name() or ind.name
             local size = render.get_text_size(text_font, name)
-            
+
             indicators[i].anim = essentials.anim(indicators[i].anim, active and 1 or 0)
             if indicators[i].anim > 0.08 then
-                local offset_y = 4 + (9 * plus)
+                local offset_y = 5 + (8 * plus)
 
                 render.push_alpha_modifier(indicators[i].anim)
-                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(m_animations.indicators.add_x), offset_y), color_t(255, 255, 255, 255))
+                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ui_animations.indicators.add_x), offset_y), color_t(255, 255, 255, 255))
                 render.pop_alpha_modifier()
-                plus = plus + indicators[i].anim
+                plus = plus + math.ceil(indicators[i].anim * 100) / 100
             end
         end
+    end)
+end
+
+do
+    local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
+    local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local watermark_entry = function (name, text)
+        return {
+            name = name,
+            text = text,
+        }
+    end
+    local m_show_seconds
+    local watermark_entries = {
+        watermark_entry("name", function()
+            return user.name
+        end),
+        watermark_entry("fps", client.get_fps),
+        watermark_entry("latency", function()
+            if not engine.is_connected() then return end
+            return "delay: " .. math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999) .. "ms"
+        end),
+        watermark_entry("tickrate", function()
+            if not engine.is_connected() then return end
+            return string.format("%dtick",client.get_tickrate())
+        end),
+        watermark_entry("time", function()
+            local hours, min, sec = client.get_local_time()
+            local time = (hours < 10 and "0" .. hours or hours) .. ":" .. (min < 10 and "0" .. min or min)
+            local seconds = ":" .. (sec < 10 and "0" .. sec or sec)
+            if m_show_seconds:get() then
+                return time .. seconds end
+            return time
+        end),
+    }
+    local watermark_entries_names = {}
+    for i = 1, #watermark_entries do
+        watermark_entries_names[#watermark_entries_names+1] = watermark_entries[i].name
+    end
+    local m_features = t_visuals.indicators:add_multi_selection("features", watermark_entries_names):master(m_watermark)
+    m_show_seconds = t_visuals.indicators:add_checkbox("show seconds")
+
+    m_watermark:callback(e_callbacks.DRAW_WATERMARK, function (watermark_text) return end)
+    m_watermark:callback(e_callbacks.PAINT, function ()
+        m_show_seconds:set_visible(m_features:get(5))
+        local pos = vec2_t(500, 11)
+        local size = vec2_t(500, 17)
+        local color = m_watermark_color:get()
+        
+        local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
+        local watermark_name = {"corv", "ette.lua"}
+        local watermark_textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2])
+        local watermark_text = {}
+        for i = 1, #watermark_entries do
+            if m_features:get(i) then
+                local result = watermark_entries[i].text()
+                if result then
+                    table.insert(watermark_text, tostring(result)) end
+            end
+        end
+        local text = table.concat(watermark_text, "  ")
+        if #text > 0 then
+            text = "  " .. text
+        end
+
+        local textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2] .. text)
+
+       ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
+       size.x = math.ceil(ui_animations.widgets.water.width)
+       pos.x = ss.x - size.x - 11
+
+        render.solus_container(pos, size, color, 1, 3)
+        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 2), color_t(255, 255, 255, 255))
+        render.text(widgets_font, watermark_name[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_name[1]).x, 2), color_t(color.r, color.g, color.b, 255))
+        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255, 255))
     end)
 end
 
 local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
 local m_autopeek_color_stand = m_autopeek:add_color_picker("stand", color_t(255, 255, 255))
 local m_autopeek_color_return = m_autopeek:add_color_picker("return", color_t(223, 255, 143))
-local m_autopeek_style = t_visuals.general:add_selection("style", {"neverlose", "gamesex"})
+local m_autopeek_style = t_visuals.general:add_selection("style", {"neverlose", "gamesex"}):master(m_autopeek)
 local m_autopeek_radius = t_visuals.general:add_slider("radius", 10, 30):master(m_autopeek)
-m_autopeek_style:master(m_autopeek)
 do
     local col = ui.aimbot.general.misc.autopeek_mode:get()
     m_autopeek_color_stand:set(col:alpha(m_autopeek_color_stand:get().a))
