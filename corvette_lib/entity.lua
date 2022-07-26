@@ -137,7 +137,7 @@ end
 end
 do local jump_key = input.find_key_bound_to_binding("jump")
 ---@param s entity_t
----@return "stand"|"walk"|"move"|"air"|"c-air"|"crouch"|"fakeduck"|nil
+---@return "stand"|"walk"|"move"|"air"|"crouch"|"fakeduck"|nil
 lua_entity_t.get_movement_type = function(s)
     local velocity = s:get_velocity()
     local crouching = s:is_crouching()
