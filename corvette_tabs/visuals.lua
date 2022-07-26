@@ -11,7 +11,7 @@ local ui_animations = {
 }
 do
     local logo_font = render.create_font("Verdana", 12, 600, e_font_flags.DROPSHADOW)
-    local text_font = render.create_font("Smallest Pixel-7", 8, 100, e_font_flags.DROPSHADOW)
+    local text_font = render.create_font("?", 8, 100, e_font_flags.DROPSHADOW)
     local add_ind = function(name, condition, category)
         return {
             name = name,
@@ -49,8 +49,8 @@ do
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
     local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
     local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
-    local m_keybinds_x = t_visuals.indicators:add_slider("x", 0, ss.x, "keybinds")
-    local m_keybinds_y = t_visuals.indicators:add_slider("y", 0, ss.y, "keybinds")
+    local m_keybinds_x = t_visuals.indicators:add_slider("x", 0, ss.x)
+    local m_keybinds_y = t_visuals.indicators:add_slider("y", 0, ss.y)
 
     m_keybinds_x:set_visible(false)
     m_keybinds_y:set_visible(false)
@@ -97,19 +97,19 @@ do
             if condition ~= nil then
                 local active = condition:get()
                 local name = bindlist[i].name
-                local mode = modes[condition:get_mode() + 1]     
+                local mode = modes[condition:get_mode() + 1]
                 bindlist[i].anim = essentials.anim(bindlist[i].anim, active and 1 or 0, 20)
                 if active then h[#h+1] = i end
 
                 if bindlist[i].anim > 0.08 then
                     local offset_y = size.y + 2 + (14 * plus)
-
-                    render.push_alpha_modifier(bindlist[i].anim)
-                    render.text(widgets_font, name, pos + vec2_t(5, offset_y), color_t(255, 255, 255, 255))
-                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
+                    local anim = math.ceil(bindlist[i].anim * 100) / 100
+                    render.push_alpha_modifier(anim)
+                    render.text(widgets_font, name, pos + vec2_t(5, offset_y), color_t(255, 255, 255))
+                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255))
                     render.pop_alpha_modifier()
 
-                    plus = plus + bindlist[i].anim
+                    plus = plus + anim
 
                     if render.get_text_size(widgets_font, name .. mode).x > resize.minwidth then
                         resize.minwidth = render.get_text_size(widgets_font, name .. mode).x
@@ -128,7 +128,7 @@ do
         if ui_animations.widgets.binds.alpha > 0.08 then
             render.solus_container(pos, size, color, ui_animations.widgets.binds.alpha, 3)
             render.push_alpha_modifier(ui_animations.widgets.binds.alpha)
-            render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 2), color_t(255, 255, 255, 255))
+            render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 2), color_t(255, 255, 255))
             render.pop_alpha_modifier()
             m_keybinds_draggable:drag(vec2_t(ui_animations.widgets.binds.width, size.y))
         end
@@ -171,7 +171,7 @@ do
             local alpha = idx / #m_text
             local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * 1.4 % (math.pi * 2)))
 
-            local color = essentials.color_lerp(primary_color, secondary_color, anim)
+            local color = primary_color:fade(secondary_color, anim)
 
             render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(ui_animations.indicators.add_x), -8), color)
 
@@ -191,7 +191,7 @@ do
                 local offset_y = 5 + (8 * plus)
 
                 render.push_alpha_modifier(indicators[i].anim)
-                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ui_animations.indicators.add_x), offset_y), color_t(255, 255, 255, 255))
+                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ui_animations.indicators.add_x), offset_y), color_t(255, 255, 255))
                 render.pop_alpha_modifier()
                 plus = plus + math.ceil(indicators[i].anim * 100) / 100
             end
@@ -268,9 +268,9 @@ do
        pos.x = ss.x - size.x - 11
 
         render.solus_container(pos, size, color, 1, 3)
-        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 2), color_t(255, 255, 255, 255))
+        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 2), color_t(255, 255, 255))
         render.text(widgets_font, watermark_name[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_name[1]).x, 2), color_t(color.r, color.g, color.b, 255))
-        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255, 255))
+        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255))
     end)
 end
 
@@ -299,6 +299,7 @@ do
     local shot = false
     m_autopeek:callback(e_callbacks.SETUP_COMMAND, function()
         local lp = entity_list.get_local_player()
+        if not lp then return end
         if autopeek_mode:get() == 2 then return end
         local active = false
         if lp:get_velocity() > 5 then
@@ -450,6 +451,7 @@ do local render_types = {
         render.line(pos1, pos2, color)
     end,
 }
+local lerp_pos
 m_self_lagcomp = t_visuals.local_player:add_checkbox("visualize local lagcomp"):callback(e_callbacks.PAINT, function()
     local lp = entity_list.get_local_player()
     if not lp or not lp:is_alive() then return end
@@ -464,10 +466,20 @@ m_self_lagcomp = t_visuals.local_player:add_checkbox("visualize local lagcomp"):
     local color = m_self_lagcomp_color:get()
     if display_type == 1 then
         for i = 1, #records do
-            renderer(records[i], color, records[i+1])
-        end
-        if render_type == 3 then
-            renderer(records[#records], color, {origin = lp:get_abs_origin()})
+            if render_type == 3 then
+                if i == 1 then
+                    if not lerp_pos then
+                        lerp_pos = records[i].origin end
+                    lerp_pos = lerp_pos:lerp(records[i].origin, essentials.get_anim_time(20))
+                    renderer({origin = lerp_pos}, color, records[i+1])
+                    elseif i == #records then
+                        renderer(records[#records], color, {origin = lp:get_abs_origin()})
+                    else
+                        renderer(records[i], color, records[i+1])
+                    end
+            else
+                renderer(records[i], color, records[i+1])
+            end
         end
     else
         renderer(records[1], color)

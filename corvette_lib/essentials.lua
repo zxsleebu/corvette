@@ -44,16 +44,7 @@ essentials = {
                 return v
             end
         end
-      
         return delta * t + x
-    end,
-    color_lerp = function(clr1, clr2, percent)
-        return color_t(
-            math.floor(essentials.lerp(clr1.r, clr2.r, percent)),
-            math.floor(essentials.lerp(clr1.g, clr2.g, percent)),
-            math.floor(essentials.lerp(clr1.b, clr2.b, percent)),
-            math.floor(essentials.lerp(clr1.a, clr2.a, percent))
-        )
     end,
     draggable = function(x, y, size, name)
         return {
@@ -63,7 +54,6 @@ essentials = {
             size_y = size.y,
             started_dragging = false,
             initial_drag_pos = vec2_t(0, 0),
-    
             drag = function (self, size)
                 self.size_x = size.x or self.size_x
                 self.size_y = size.y or self.size_y
@@ -91,7 +81,6 @@ essentials = {
     end
 }
 
-clamp = function(val, min, max) return math.max(min, math.min(max, val)) end
 math.round = function(a) return math.floor(a + 0.5) end
 
 ---@param time number

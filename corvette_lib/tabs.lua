@@ -1,10 +1,51 @@
+---@class element_t
+---@field el userdata
+---@field type string
+local element_t = {
+    ---@generic T
+    ---@param self T
+    ---@param master element_t
+    ---@return T
+    master =  function(self, master) end,
+    ---@generic T
+    ---@param self T
+    ---@param type e_callbacks
+    ---@param fn fun(...)
+    ---@return T
+    callback =  function(self, type, fn) end,
+    ---@generic T
+    ---@param self T
+    ---@param fn fun(el: T)
+    ---@return T
+    change = function(self, fn) end,
+}
+
+---@class checkbox_t : element_t
+---@class slider_t : element_t
+---@class button_t : element_t
+---@class text_t : element_t
+---@class list_t : element_t
+---@class text_input_t : element_t
+---@class multi_selection_t : element_t
+---@class selection_t : element_t
+
+---@class tab_t
+---@field add_checkbox fun(self: tab_t, name: string, default_value?: boolean): checkbox_t
+---@field add_slider fun(self: tab_t, name: string, min: number, max: number, step?: number, precision?: number, suffix?: string): slider_t
+---@field add_list fun(self: tab_t, name: string, items: string[], visible_items?: number): list_t
+---@field add_text_input fun(self: tab_t, name: string): text_input_t
+---@field add_separator fun(self: tab_t)
+---@field add_button fun(self: tab_t, name: string, callback: fun(...)): button_t
+---@field add_multi_selection fun(self: tab_t, name: string, items: string[], visible_items?: number): multi_selection_t
+---@field add_selection fun(self: tab_t, name: string, items: string[], visible_items?: number): selection_t
+---@field add_text fun(self: tab_t, name: string): text_t
 tabs = {
     list = {},
     __group_mt = {
         __index = function(s, name)
             if name:sub(1, 4) == "add_" then
                 return function(group, elem_name, ...)
-                    local elem = elements.new(menu[name](group.menu_name, elem_name, ...))
+                    local elem = elements.new(menu[name](group.menu_name, elem_name, ...), name:sub(5))
                     elem.name = elem_name
                     group.elements[#group.elements+1] = elem
                     return elem
@@ -19,6 +60,9 @@ tabs = {
             return rawget(s, name)
         end,
     },
+    ---@param name string
+    ---@param groups string[]
+    ---@return table<string, tab_t>
     new = function(name, groups)
         local tab = {
             name = name,
@@ -64,6 +108,7 @@ tabs = {
 }
 elements = {
     list = {},
+    changeable_types = set{"checkbox", "slider"},
     mt = {
         __rawindex = {
             master = function(s, elem)
@@ -88,13 +133,20 @@ elements = {
                 end)
                 return s
             end,
+            change = function(s, func)
+                if elements.changeable_types[s.type] then
+                    s.change_callback = func
+                    func(s)
+                end
+                return s
+            end
         },
         __index = function(s, name)
             local raw = rawget(elements.mt.__rawindex, name)
             if name:sub(1, 4) == "add_" then
                 return function(elem, ...)
-                    local el = elements.new(s.el[name](elem.el, ...))
-                    el:master(s)
+                    local el = elements.new(s.el[name](elem.el, ...), name:sub(5))
+                    if s.type == "checkbox" then el:master(s) end
                     return el
                 end
             end
@@ -108,10 +160,14 @@ elements = {
             return raw
         end,
     },
-    new = function(el)
+    new = function(el, elem_type)
         local elem = {
-            el = el
+            el = el,
+            type = elem_type
         }
+        if elements.changeable_types[elem.type] then
+            elem.old_value = elem.el:get()
+        end
         setmetatable(elem, elements.mt)
         elements.list[#elements.list+1] = elem
         return elem
@@ -122,6 +178,24 @@ elements = {
             if elem.master_element then
                 elem:set_visible(elem:check_master())
             end
+            if elem.old_value ~= nil then
+                local value = elem.el:get()
+                if value ~= elem.old_value then
+                    elem.old_value = value
+                    if elem.change_callback then
+                        elem:change_callback()
+                    end
+                end
+            end
         end
     end
 }
+callbacks.add(e_callbacks.SHUTDOWN, function()
+    for i = 1, #elements.list do
+        local elem = elements.list[i]
+        if elem.change_callback and elem.type == "checkbox" then
+            elem:set(false)
+            elem:change_callback()
+        end
+    end
+end)
