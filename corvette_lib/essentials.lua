@@ -52,7 +52,6 @@ essentials = {
                 return v
             end
         end
-      
         return delta * t + x
     end,
     color_percent = function(clr1, clr2, percent)
@@ -98,7 +97,6 @@ essentials = {
     end
 }
 
-clamp = function(val, min, max) return math.max(min, math.min(max, val)) end
 math.round = function(a) return math.floor(a + 0.5) end
 
 ---@param time number
