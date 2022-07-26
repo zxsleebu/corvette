@@ -61,34 +61,34 @@ end
 ---@param segments number
 ---@param radius number
 ---@param width number
----@param color_arc color_t|nil
+---@param color_arc color_t
 render.arc = function (center_position, start_angle, end_angle, segments, radius, width, color_arc)
     start_angle, end_angle = start_angle * (math.pi / 180), end_angle * (math.pi / 180)
-  
+
     local rotation = start_angle
     local step = 0.1 + (2 * math.pi) / segments
-  
+
     while rotation < end_angle - 0.01 do
         local rotation_sin, rotation_cos = math.sin(rotation), math.cos(rotation)
         local next_rotation_sin, next_rotation_cos = math.sin(rotation + step), math.cos(rotation + step)
-  
+
         local position = vec2_t(radius * rotation_cos + center_position.x, radius * rotation_sin + center_position.y)
         local next_position = vec2_t(radius * next_rotation_cos + center_position.x, radius * next_rotation_sin + center_position.y)
-        
+
         local width_position = vec2_t((radius + width) * rotation_cos + center_position.x, (radius + width) * rotation_sin + center_position.y)
         local width_next_position = vec2_t((radius + width) * next_rotation_cos + center_position.x, (radius + width) * next_rotation_sin + center_position.y)
-  
+
         if position.x ~= nil then
-          render.polygon({position, width_position, width_next_position, next_position}, color_arc)
+            render.polygon({position, width_position, width_next_position, next_position}, color_arc)
         end
-  
+
         rotation = rotation + (step - 0.1)
     end
 end
 
 ---@param pos vec2_t
 ---@param size vec2_t
----@param c color_t|nil
+---@param c color_t
 ---@param alpha number
 ---@param rounding number
 render.solus_container = function (pos, size, c, alpha, rounding)
