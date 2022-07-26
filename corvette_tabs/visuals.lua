@@ -50,8 +50,8 @@ do
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
     local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
     local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
-    local m_keybinds_x = t_visuals.indicators:add_slider("k_x", 0, ss.x, "keybinds")
-    local m_keybinds_y = t_visuals.indicators:add_slider("k_y", 0, ss.y, "keybinds")
+    local m_keybinds_x = t_visuals.indicators:add_slider("k_x", 0, ss.x)
+    local m_keybinds_y = t_visuals.indicators:add_slider("k_y", 0, ss.y)
 
     m_keybinds_x:set_visible(false)
     m_keybinds_y:set_visible(false)
@@ -276,8 +276,8 @@ end
 do
     local warning_font = render.create_font("Calibri", 38, 600, e_font_flags.ANTIALIAS)
     local m_slowed_down = t_visuals.indicators:add_checkbox("slowed down", true)
-    local m_slowed_down_x = t_visuals.indicators:add_slider("sw_x", 0, ss.x, "slowed_down")
-    local m_slowed_down_y = t_visuals.indicators:add_slider("sw_y", 0, ss.y, "slowed_down")
+    local m_slowed_down_x = t_visuals.indicators:add_slider("sw_x", 0, ss.x)
+    local m_slowed_down_y = t_visuals.indicators:add_slider("sw_y", 0, ss.y)
 
     m_slowed_down_x:set_visible(false)
     m_slowed_down_y:set_visible(false)
