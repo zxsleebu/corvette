@@ -91,6 +91,16 @@ essentials = {
     end
 }
 
-clamp = function(val, min, max)
-    return math.max(min, math.min(max, val))
+clamp = function(val, min, max) return math.max(min, math.min(max, val)) end
+math.round = function(a) return math.floor(a + 0.5) end
+
+---@param time number
+---@return number
+engine.time_to_ticks = function(time)
+    return math.round(time / global_vars.interval_per_tick())
+end
+---@param ticks number
+---@return number
+engine.tick_to_time = function (ticks)
+    return ticks * global_vars.interval_per_tick()
 end

@@ -123,6 +123,18 @@ end
 lua_entity_t.is_in_air = function(s)
     return bit.band(s:get_prop("m_fFlags"), 1) ~= 1
 end
+do
+local player = ffi.cast("int*", memory.find_pattern("client.dll", "55 8B EC 83 E4 F8 83 EC 18 56 57 8B F9 89 7C 24 0C") + 0x47)[0]
+local get_abs_origin = ffi.cast("float*(__thiscall*)(int)", ffi.cast("int*", player + 0x28)[0])
+---@param s entity_t
+---@return vec3_t
+lua_entity_t.get_abs_origin = function(s)
+    local address = s:get_address()
+    local origin = get_abs_origin(address)
+    origin = vec3_t(origin[0], origin[1], origin[2])
+    return origin and origin or s:get_render_origin()
+end
+end
 do local jump_key = input.find_key_bound_to_binding("jump")
 ---@param s entity_t
 ---@return "stand"|"walk"|"move"|"air"|"c-air"|"crouch"|"fakeduck"|nil
@@ -157,3 +169,71 @@ lua_entity_t.get_animstate = function(s)
     if not ptr then return end
     return ffi.cast("c_animstate_t**", ptr + 0x9960)[0]
 end
+---@param s entity_t
+---@return vec3_t[]
+lua_entity_t.get_skeleton = function(s)
+    local skel = {}
+    for i = 0, 18 do
+        skel[#skel+1] = s:get_hitbox_pos(i) end
+    return skel
+end
+do
+local lag_records = {}
+local get_lerp_time = function()
+    local upd_rate = cvars.cl_updaterate:get_int()
+    local min_upd_rate = cvars.sv_minupdaterate
+    local max_upd_rate = cvars.sv_maxupdaterate
+    if min_upd_rate and max_upd_rate then
+        upd_rate = max_upd_rate:get_int() end
+    local ratio = cvars.cl_interp_ratio:get_float()
+    if ratio == 0 then
+        ratio = 1 end
+    local lerp = cvars.cl_interp:get_float()
+    local c_min_ratio = cvars.sv_client_min_interp_ratio
+    local c_max_ratio = cvars.sv_client_max_interp_ratio
+    if c_min_ratio and c_max_ratio and c_min_ratio:get_float() ~= 1 then
+        ratio = clamp(ratio, c_min_ratio:get_float(), c_max_ratio:get_float()) end
+    return math.max(lerp, (ratio / upd_rate))
+end
+local is_tick_valid = function(tick)
+    local sv_maxunlag = cvars.sv_maxunlag:get_float()
+    local outgoing_latency = engine.get_latency(e_latency_flows.OUTGOING)
+    local correct = clamp(outgoing_latency + get_lerp_time(), 0, sv_maxunlag)
+    local delta = correct - (global_vars.cur_time() - engine.tick_to_time(tick))
+    return math.abs(delta) < 0.2
+end
+---@param s entity_t
+---@return nil
+lua_entity_t.save_lagrecord = function(s)
+    local uid = s:get_steamids()
+    if not uid then return end
+    if not lag_records[uid] then
+        lag_records[uid] = {} end
+    local records = lag_records[uid]
+    lag_records[uid][#records+1] = {
+        skeleton = s:get_skeleton(),
+        velocity = s:get_velocity(true),
+        origin = s:get_abs_origin(),
+        tick = engine.time_to_ticks(s:get_prop("m_flSimulationTime")),
+    }
+    records = lag_records[uid]
+    for i = 1, #records do
+        if records[i] then
+            if not is_tick_valid(records[i].tick) then
+                table.remove(lag_records[uid], i) end
+        end
+    end
+end
+---@param s entity_t
+---@return table|nil
+lua_entity_t.get_lagrecords = function(s)
+    local uid = s:get_steamids()
+    if not uid then return end
+    return lag_records[uid]
+end
+end
+callbacks.add(e_callbacks.NET_UPDATE, function()
+    local lp = entity_list.get_local_player()
+    if not lp or not lp:is_alive() then return end
+    lp:save_lagrecord()
+end)

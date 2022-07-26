@@ -423,15 +423,70 @@ callbacks.add(e_callbacks.ANTIAIM, function(ctx)
     if m_animfucker:get(2) then
         ctx:set_render_pose(e_poses.JUMP_FALL, 1)
     end
-    if m_animfucker:get(3) then
-        if m_bOnLand then
-            ctx:set_render_pose(e_poses.BODY_PITCH, 0.5)
-        end
+    if m_animfucker:get(3) and m_bOnLand then
+        ctx:set_render_pose(e_poses.BODY_PITCH, 0.5)
     end
 end)
 
-callbacks.add(e_callbacks.EVENT, function (event)
-    if event.name == "round_start" then
-        m_bOnLand, m_iGroundTicks, m_flEndTime = false, 0, 0
+local m_self_lagcomp_type
+local m_self_lagcomp_render_type
+local m_self_lagcomp
+local m_self_lagcomp_color
+do local render_types = {
+    function(record, color, next_record)
+        local pos = render.world_to_screen(record.origin)
+        if not pos then return end
+        render.circle(pos, 5, color)
+    end,
+    function(record, color, next_record)
+        render.skeleton(record.skeleton, color)
+    end,
+    function(record, color, next_record)
+        if not record or not next_record then return end
+        local pos1, pos2 =
+        render.world_to_screen(record.origin), render.world_to_screen(next_record.origin)
+        if not pos1 or not pos2 then return end
+        render.line(pos1, pos2, color)
+    end,
+}
+m_self_lagcomp = t_visuals.local_player:add_checkbox("visualize local lagcomp"):callback(e_callbacks.PAINT, function()
+    local lp = entity_list.get_local_player()
+    if not lp then return end
+    local records = lp:get_lagrecords()
+    if not records then return end
+    local render_type = m_self_lagcomp_render_type:get()
+    if render_type == 3 then
+        m_self_lagcomp_type:set(1)
+    end
+    local display_type = m_self_lagcomp_type:get()
+    local renderer = render_types[render_type]
+    local color = m_self_lagcomp_color:get()
+    if display_type == 1 then
+        for i = 1, #records do
+            renderer(records[i], color, records[i+1])
+        end
+        if render_type == 3 then
+            renderer(records[#records], color, {origin = lp:get_abs_origin()})
+        end
+    else
+        renderer(records[1], color)
+    end
+    if render_type == 1 then
+        local origin = lp:get_abs_origin()
+        local pos = render.world_to_screen(origin)
+        if pos then
+            render.circle(pos, 5, color_t(50, 255, 50))
+        end
     end
 end)
+end
+m_self_lagcomp_color = m_self_lagcomp:add_color_picker("color", color_t(255, 255, 255))
+m_self_lagcomp_type = t_visuals.local_player:add_selection("local lagcomp type", {
+    "all records",
+    "last record"
+}):master(m_self_lagcomp)
+m_self_lagcomp_render_type = t_visuals.local_player:add_selection("local lagcomp render", {
+    "circle",
+    "skeleton (broken on fullscreen)",
+    "line"
+}):master(m_self_lagcomp)
