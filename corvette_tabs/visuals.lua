@@ -414,6 +414,7 @@ end)
 
 callbacks.add(e_callbacks.ANTIAIM, function(ctx)
     local lp = entity_list.get_local_player()
+    if not lp then return end
 	if m_animfucker:get(1) then
 		ctx:set_render_pose(e_poses.RUN, 0)
 	end
@@ -451,7 +452,7 @@ do local render_types = {
 }
 m_self_lagcomp = t_visuals.local_player:add_checkbox("visualize local lagcomp"):callback(e_callbacks.PAINT, function()
     local lp = entity_list.get_local_player()
-    if not lp then return end
+    if not lp or not lp:is_alive() then return end
     local records = lp:get_lagrecords()
     if not records then return end
     local render_type = m_self_lagcomp_render_type:get()
