@@ -31,13 +31,21 @@ essentials = {
        return antiaim.get_desync_side() == 2
     end,
     get_anim_time = function(speed)
-        return global_vars.frame_time() * (speed or 14)
+        return global_vars.absolute_frame_time() * (speed or 14)
     end,
     anim = function(a, b, t)
         t = essentials.get_anim_time(t)
         return a + (b - a) * t
     end,
-    lerp = function(x, v, t)
+    color_anim = function(color_a, color_b, timer)
+        return color_t(
+            math.floor(essentials.anim(color_a.r, color_b.r, timer)),
+            math.floor(essentials.anim(color_a.g, color_b.g, timer)),
+            math.floor(essentials.anim(color_a.b, color_b.b, timer)),
+            math.floor(essentials.anim(color_a.a, color_b.a, timer))
+        )
+    end,
+    percent_lerp = function(x, v, t)
         local delta = v - x;
         if type(delta) == 'number' then
             if math.abs(delta) < 0.005 then
@@ -47,12 +55,12 @@ essentials = {
       
         return delta * t + x
     end,
-    color_lerp = function(clr1, clr2, percent)
+    color_percent = function(clr1, clr2, percent)
         return color_t(
-            math.floor(essentials.lerp(clr1.r, clr2.r, percent)),
-            math.floor(essentials.lerp(clr1.g, clr2.g, percent)),
-            math.floor(essentials.lerp(clr1.b, clr2.b, percent)),
-            math.floor(essentials.lerp(clr1.a, clr2.a, percent))
+            math.floor(essentials.percent_lerp(clr1.r, clr2.r, percent)),
+            math.floor(essentials.percent_lerp(clr1.g, clr2.g, percent)),
+            math.floor(essentials.percent_lerp(clr1.b, clr2.b, percent)),
+            math.floor(essentials.percent_lerp(clr1.a, clr2.a, percent))
         )
     end,
     draggable = function(x, y, size, name)
@@ -63,16 +71,15 @@ essentials = {
             size_y = size.y,
             started_dragging = false,
             initial_drag_pos = vec2_t(0, 0),
-    
             drag = function (self, size)
                 self.size_x = size.x or self.size_x
                 self.size_y = size.y or self.size_y
-
                 if menu.is_open() then
                     local mouse_position = input.get_mouse_pos()
                     local in_bounds = input.is_mouse_in_bounds(vec2_t(self.position_x:get(), self.position_y:get()), vec2_t(self.size_x, self.size_y))
                     if (in_bounds or self.started_dragging) and input.is_key_held(e_keys.MOUSE_LEFT) and (widgets.mouse_target == "" or widgets.mouse_target == name) then
                         widgets.mouse_target = name
+                        render.rect_filled(vec2_t(self.position_x:get(), self.position_y:get()), vec2_t(self.size_x, self.size_y), color_t(255, 255, 255, 50))
                         if not self.started_dragging then
                             self.started_dragging = true
                             self.initial_drag_pos = vec2_t(mouse_position.x - self.position_x:get(), mouse_position.y - self.position_y:get())

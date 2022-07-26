@@ -5,18 +5,19 @@ local ui_animations = {
         add_x = 0
     },
     widgets = {
-        water = {width = 0},
-        binds = {width = 0, alpha = 0}
+        water = {width = 1},
+        binds = {width = 1, alpha = 0},
+        sdown = {width = 1, alpha = 0},
     }
 }
 do
     local logo_font = render.create_font("Verdana", 12, 600, e_font_flags.DROPSHADOW)
     local text_font = render.create_font("Smallest Pixel-7", 8, 100, e_font_flags.DROPSHADOW)
-    local add_ind = function(name, condition, category)
+    local add_ind = function(name, condition, color)
         return {
             name = name,
             condition = condition,
-            category = category,
+            color = color,
             anim = 0,
         }
     end
@@ -28,8 +29,8 @@ do
         }
     end
     local bind_ind = function(reference)
-        return function() 
-            return reference 
+        return function()
+            return reference
         end
     end
     local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other"}
@@ -49,8 +50,8 @@ do
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
     local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
     local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
-    local m_keybinds_x = t_visuals.indicators:add_slider("x", 0, ss.x, "keybinds")
-    local m_keybinds_y = t_visuals.indicators:add_slider("y", 0, ss.y, "keybinds")
+    local m_keybinds_x = t_visuals.indicators:add_slider("k_x", 0, ss.x, "keybinds")
+    local m_keybinds_y = t_visuals.indicators:add_slider("k_y", 0, ss.y, "keybinds")
 
     m_keybinds_x:set_visible(false)
     m_keybinds_y:set_visible(false)
@@ -86,14 +87,14 @@ do
         local modes = {"[toggled]", "[holding]", "[holding off]", "[always]", "[disabled]"}
         local pos = vec2_t(m_keybinds_x:get(), m_keybinds_y:get())
         local resize = {width = 20, minwidth = 0}
-        local size = vec2_t(70, 17)
+        local size = vec2_t(70, 19)
         local color = m_keybinds_color:get()
         local text = "keybinds"
         local plus = 0
         local h = {}
 
         for i = 1, #bindlist do
-            local err, condition = pcall(bindlist[i].reference)
+            local condition = bindlist[i].reference()
             if condition ~= nil then
                 local active = condition:get()
                 local name = bindlist[i].name
@@ -109,7 +110,7 @@ do
                     render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
                     render.pop_alpha_modifier()
 
-                    plus = plus + bindlist[i].anim
+                    plus = plus + math.ceil(bindlist[i].anim * 100) / 100
 
                     if render.get_text_size(widgets_font, name .. mode).x > resize.minwidth then
                         resize.minwidth = render.get_text_size(widgets_font, name .. mode).x
@@ -128,24 +129,24 @@ do
         if ui_animations.widgets.binds.alpha > 0.08 then
             render.solus_container(pos, size, color, ui_animations.widgets.binds.alpha, 3)
             render.push_alpha_modifier(ui_animations.widgets.binds.alpha)
-            render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 2), color_t(255, 255, 255, 255))
+            render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 3), color_t(255, 255, 255, 255))
             render.pop_alpha_modifier()
-            m_keybinds_draggable:drag(vec2_t(ui_animations.widgets.binds.width, size.y))
+            m_keybinds_draggable:drag(vec2_t(ui_animations.widgets.binds.width + 2, size.y))
         end
     end)
 
     local indicators = {
-        add_ind("doubletap", bind_ind(ui.aimbot.general.exploits.doubletap)),
-        add_ind("onshot", bind_ind(ui.aimbot.general.exploits.hideshots)),
-        add_ind("baim", target_overrides("force hitbox")),
+        add_ind("DOUBLETAP", bind_ind(ui.aimbot.general.exploits.doubletap), color_t(255, 255, 255, 255)),
+        add_ind("ONSHOT", bind_ind(ui.aimbot.general.exploits.hideshots), color_t(255, 255, 255, 255)),
+        add_ind("BAIM", target_overrides("force hitbox"), color_t(255, 255, 255, 255)),
         add_ind(function()
             local weapon = get_active_weapon()
             if not weapon then return "DAMAGE" end
             local el = menu.find("aimbot", weapon, "target overrides", "force min. damage")
             if not el then return "DAMAGE" end
             return "DAMAGE: " .. el[1]:get()
-        end, target_overrides("force min. damage")),
-        add_ind("safepoint", target_overrides("force safepoint")),
+        end, target_overrides("force min. damage"), color_t(255, 255, 255, 255)),
+        add_ind("SAFEPOINT", target_overrides("force safepoint"), color_t(255, 255, 255, 255)),
     }
 
     local m_indicators = t_visuals.indicators:add_checkbox("under crosshair", true)
@@ -171,7 +172,7 @@ do
             local alpha = idx / #m_text
             local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * 1.4 % (math.pi * 2)))
 
-            local color = essentials.color_lerp(primary_color, secondary_color, anim)
+            local color = essentials.color_percent(primary_color, secondary_color, anim)
 
             render.text(logo_font, m_letter, pos + vec2_t(x + math.ceil(ui_animations.indicators.add_x), -8), color)
 
@@ -188,17 +189,16 @@ do
 
             indicators[i].anim = essentials.anim(indicators[i].anim, active and 1 or 0)
             if indicators[i].anim > 0.08 then
+                if name == "DOUBLETAP" then indicators[i].color = essentials.color_anim(indicators[i].color, exploits.get_charge() > 0 and color_t(255, 255, 255, 255) or color_t(255, 0, 0, 255), 8) end
                 local offset_y = 5 + (8 * plus)
-
                 render.push_alpha_modifier(indicators[i].anim)
-                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ui_animations.indicators.add_x), offset_y), color_t(255, 255, 255, 255))
+                render.text(text_font, name, pos + vec2_t(-size.x / 2 + math.ceil(ui_animations.indicators.add_x), offset_y), indicators[i].color)
                 render.pop_alpha_modifier()
                 plus = plus + math.ceil(indicators[i].anim * 100) / 100
             end
         end
     end)
 end
-
 do
     local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
     local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
@@ -241,11 +241,10 @@ do
     m_watermark:callback(e_callbacks.DRAW_WATERMARK, function (watermark_text) return end)
     m_watermark:callback(e_callbacks.PAINT, function ()
         m_show_seconds:set_visible(m_features:get(5))
-        local pos = vec2_t(500, 11)
-        local size = vec2_t(500, 17)
+        local pos = vec2_t(0, 11)
+        local size = vec2_t(500, 19)
         local color = m_watermark_color:get()
         
-        local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
         local watermark_name = {"corv", "ette.lua"}
         local watermark_textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2])
         local watermark_text = {}
@@ -263,14 +262,187 @@ do
 
         local textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2] .. text)
 
-       ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
-       size.x = math.ceil(ui_animations.widgets.water.width)
-       pos.x = ss.x - size.x - 11
+        ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
+        size.x = math.ceil(ui_animations.widgets.water.width)
+        pos.x = ss.x - size.x - 11
 
         render.solus_container(pos, size, color, 1, 3)
-        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 2), color_t(255, 255, 255, 255))
-        render.text(widgets_font, watermark_name[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_name[1]).x, 2), color_t(color.r, color.g, color.b, 255))
-        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 2), color_t(255, 255, 255, 255))
+        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 3), color_t(255, 255, 255, 255))
+        render.text(widgets_font, watermark_name[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_name[1]).x, 3), color_t(color.r, color.g, color.b, 255))
+        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 3), color_t(255, 255, 255, 255))
+    end)
+end
+
+do
+    local warning_font = render.create_font("Calibri", 38, 600, e_font_flags.ANTIALIAS)
+    local m_slowed_down = t_visuals.indicators:add_checkbox("slowed down", true)
+    local m_slowed_down_x = t_visuals.indicators:add_slider("sw_x", 0, ss.x, "slowed_down")
+    local m_slowed_down_y = t_visuals.indicators:add_slider("sw_y", 0, ss.y, "slowed_down")
+
+    m_slowed_down_x:set_visible(false)
+    m_slowed_down_y:set_visible(false)
+
+    local m_slowed_down_draggable = essentials.draggable(m_slowed_down_x, m_slowed_down_y, vec2_t(146, 37), "slowed_down")
+
+    local color_mod = function(perc)
+        local r = math.ceil(124 * 2 - 124 * perc)
+        local g = math.ceil(180 * perc)
+        local b = 13
+        return color_t(r, g, b, 255)
+    end
+
+    m_slowed_down:callback(e_callbacks.PAINT, function ()
+        local pos = vec2_t(m_slowed_down_x:get(), m_slowed_down_y:get())
+        local lp = entity_list.get_local_player()
+        local velmod = 1
+        local size = vec2_t(102, 11)
+
+        if lp and lp:is_alive() then
+            velmod = lp:get_prop("m_flVelocityModifier")
+        else
+            velmod = 1
+        end
+
+        ui_animations.widgets.sdown.width = essentials.anim(ui_animations.widgets.sdown.width, velmod)
+
+        local alpha = math.sin(math.abs(-math.pi + (global_vars.real_time() * (1.2 / 1)) % (math.pi * 2)))
+        local text = "Slowed down " .. string.format("%d%%", velmod * 100)
+        local textsize = render.get_text_size(widgets_font, text)
+        local color = color_mod(ui_animations.widgets.sdown.width)
+        ui_animations.widgets.sdown.alpha = essentials.anim(ui_animations.widgets.sdown.alpha, (velmod < 1 or menu.is_open()) and 1 or 0)
+
+        if ui_animations.widgets.sdown.alpha > 0.08 then
+            render.push_alpha_modifier(ui_animations.widgets.sdown.alpha)
+            render.rect_filled(pos + vec2_t(43, textsize.y + 12), vec2_t(size.x + 1, size.y + 1), color_t(17, 17, 17, 200), 0)
+            render.rect_filled(pos + vec2_t(43 + 1, textsize.y + 12 + 1), vec2_t(math.ceil(size.x * (ui_animations.widgets.sdown.width * 100) / 100) - 1, size.y - 1), color, 0)
+
+            render.text(widgets_font, text, pos + vec2_t(43, 12 - 1), color_t(255, 255, 255))
+
+            render.polygon({vec2_t(pos.x, pos.y + 37), vec2_t(pos.x + 20, pos.y), vec2_t(pos.x + 40, pos.y + 37)}, color_t(17, 17, 17, 200))
+            render.polygon({vec2_t(pos.x + 3, pos.y + 37 - 2), vec2_t(pos.x + 20, pos.y + 3), vec2_t(pos.x + 40 - 3, pos.y + 37 - 2)}, color:alpha(math.ceil(255 * alpha)))
+            render.text(warning_font, "!", pos + vec2_t(14, 2), color_t(17, 17, 17, math.ceil(255 * alpha)))
+            render.pop_alpha_modifier()
+            m_slowed_down_draggable:drag(vec2_t(146, 37))
+        end
+    end)
+end
+
+do
+    local logs = {}
+    local m_logs_under_crosshair = t_visuals.indicators:add_checkbox("logs under crosshair", true)
+    local m_accent_color = m_logs_under_crosshair:add_color_picker("accent color", color_t(148, 199, 59))
+    local m_maximum_count_logs = t_visuals.indicators:add_slider("maximum count logs", 3, 17)
+    m_maximum_count_logs:master(m_logs_under_crosshair)
+
+    m_logs_under_crosshair:callback(e_callbacks.PAINT, function ()
+        local pos = vec2_t(ss.x / 2, ss.y / 1.48)
+        local offset_y = 0
+
+        for i = 1, #logs do
+            if logs[i] then
+                local log = logs[i]
+
+                render.multi_color_text(widgets_font, log.text_table, pos + vec2_t(math.ceil(log.x), math.ceil(offset_y)), true, log.alpha)
+
+                offset_y = offset_y + log.y
+
+                if log.time + 5 < global_vars.cur_time() or i > m_maximum_count_logs:get() then
+                    log.alpha = essentials.anim(log.alpha, 0)
+                    log.x = essentials.anim(log.x, 60, 10)
+                    if log.x >= 59 then
+                        table.remove(logs, i)
+                    end
+                else
+                    log.alpha = essentials.anim(log.alpha, 1)
+                    log.x = essentials.anim(log.x, 0, 10)
+                    log.y = essentials.anim(log.y, 14)
+                end
+            end
+        end
+    end)
+
+    m_logs_under_crosshair:callback(e_callbacks.EVENT, function (event)
+        local lp = entity_list.get_local_player()
+        if not lp or not lp:is_alive() then return end
+        if event.name ~= "player_hurt" then return end
+        if entity_list.get_player_from_userid(event.attacker) ~= lp then return end
+
+        local color = m_accent_color:get()
+        local victim = entity_list.get_player_from_userid(event.userid)
+        local text_table = {
+            {"[", color_t(255, 255, 255, 255)},
+            {"corvette.lua", color},
+            {"] Hit ", color_t(255, 255, 255, 255)},
+            {tostring(victim:get_name()), color},
+            {" in the ", color_t(255, 255, 255, 255)},
+            {hitgroups[event.hitgroup], color},
+            {" for ", color_t(255, 255, 255, 255)},
+            {tostring(event.dmg_health), color},
+            {" damage (", color_t(255, 255, 255, 255)},
+            {tostring(event.health), color},
+            {" health remaining)", color_t(255, 255, 255, 255)}
+        }
+
+        table.insert(logs, 1, {text_table = text_table, x = -60, y = 0, alpha = 0, time = global_vars.cur_time()})
+    end)
+
+    local miss_color = function(reason)
+        if reason == "resolver" then
+            return color_t(255, 0, 0, 255)
+        elseif reason == "spread" then
+            return color_t(255, 199, 0, 255)
+        elseif reason == "prediction error" then
+            return color_t(255, 127, 127, 255)
+        elseif reason == "occlusion" then
+            return color_t(255, 199, 0, 255)
+        end
+        return color_t(214, 72, 62, 255)
+    end
+    local hitchance = 0
+    m_logs_under_crosshair:callback(e_callbacks.AIMBOT_SHOOT, function (shot) hitchance = shot.hitchance end)
+    m_logs_under_crosshair:callback(e_callbacks.AIMBOT_MISS, function (miss)
+        local color = miss_color(miss.reason_string)
+        local text_table = {
+            {"[", color_t(255, 255, 255, 255)},
+            {"corvette.lua", color},
+            {"] Missed ", color_t(255, 255, 255, 255)},
+            {tostring(miss.player:get_name()), color},
+            {"'s ", color_t(255, 255, 255, 255)},
+            {hitgroups[miss.aim_hitgroup], color},
+            {" due to ", color_t(255, 255, 255, 255)},
+            {miss.reason_string, color},
+            {" (", color_t(255, 255, 255, 255)},
+            {tostring(hitchance), color},
+            {"% HC)", color_t(255, 255, 255, 255)}
+        }
+
+        table.insert(logs, 1, {text_table = text_table, x = -50, y = 0, alpha = 0, time = global_vars.cur_time()})
+    end)
+end
+
+do
+    local m_bullet_tracer = t_visuals.general:add_checkbox("local bullet tracer", true)
+    local m_bullet_tracer_color = m_bullet_tracer:add_color_picker("color", color_t(255, 255, 255, 255))
+    local m_bullet_tracer_timer = t_visuals.general:add_slider("tracer time", 1, 10)
+    m_bullet_tracer_timer:master(m_bullet_tracer)
+    local current_pos
+    m_bullet_tracer:callback(e_callbacks.EVENT, function (event)
+        if event.name == "bullet_impact" then
+            local lp = entity_list.get_local_player()
+            if not lp or not lp:is_alive() then return end
+            if entity_list.get_player_from_userid(event.userid) ~= lp then return end
+            local pos = vec3_t(event.x, event.y, event.z)
+            current_pos = pos
+        end
+    end)
+
+    m_bullet_tracer:callback(e_callbacks.SETUP_COMMAND, function (cmd)
+        local lp = entity_list.get_local_player()
+        if not lp or not lp:is_alive() then current_pos = nil return end
+        if current_pos ~= nil then
+            debug_overlay.add_line(lp:get_eye_position(), current_pos, m_bullet_tracer_color:get(), true, m_bullet_tracer_timer:get())
+            current_pos = nil
+        end
     end)
 end
 
@@ -385,6 +557,7 @@ do
 end
 
 t_visuals.esp:add_text("soon")
+
 local m_animfucker = t_visuals.local_player:add_multi_selection("animfix corrector", {
     "reversed legs",
     "static legs in air",

@@ -33,6 +33,27 @@ render.gradient_text = function(font_object, text, screen_pos, colors, centered,
         x = math.ceil(x + size)
     end
 end end
+---@param font_object font_t
+---@param text_table table
+---@param screen_pos vec2_t
+---@param centered boolean
+---@param alpha_modifier number
+render.multi_color_text = function(font_object, text_table, screen_pos, centered, alpha_modifier)
+    if centered then
+        local str = ""
+        for _, data in pairs(text_table) do
+            str = str..string.format("%s", data[1]) end
+        screen_pos.x = screen_pos.x - render.get_text_size(font_object, str).x / 2
+    end
+    local x = 0
+    for _, data in pairs(text_table) do
+        local pos = vec2_t(screen_pos.x + x, screen_pos.y) ---@type vec2_t
+        render.push_alpha_modifier(alpha_modifier)
+        render.text(font_object, string.format("%s", data[1]), pos, data[2])
+        render.pop_alpha_modifier()
+        x = x + render.get_text_size(font_object, string.format("%s", data[1])).x
+    end
+end
 
 ---@param center_position vec2_t
 ---@param start_angle number
@@ -72,13 +93,13 @@ end
 ---@param rounding number
 render.solus_container = function (pos, size, c, alpha, rounding)
     render.push_alpha_modifier(alpha)
-    render.rect_filled(vec2_t(pos.x + 1, pos.y), vec2_t(size.x - 1, size.y - 1), color_t(17, 17, 17, c.a), rounding)
-    render.rect_filled(vec2_t(pos.x + rounding, pos.y - 1), vec2_t(size.x - rounding * 2, 1), c:alpha(255)) -- up line
+    render.rect_filled(vec2_t(pos.x + 1, pos.y + 1), vec2_t(size.x - 1, size.y - 2), color_t(17, 17, 17, c.a), rounding)
+    render.rect_filled(vec2_t(pos.x + rounding, pos.y), vec2_t(size.x - rounding * 2, 1), c:alpha(255)) -- up line
     render.rect_filled(vec2_t(pos.x + rounding + 1, pos.y + size.y - 1), vec2_t(size.x - rounding * 2 - 2, 1), c:alpha(50)) -- down line
-    render.rect_fade(vec2_t(pos.x, pos.y + rounding), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100))  -- left side
-    render.rect_fade(vec2_t(pos.x + size.x, pos.y + rounding), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100)) -- right side
-    render.arc(vec2_t(pos.x + rounding + 1, pos.y + rounding), 172, 252, 20, rounding, 1, c:alpha(255)) -- left up
-    render.arc(vec2_t(pos.x + size.x - rounding, pos.y + rounding), 270, 357, 20, rounding, 1, c:alpha(255)) -- right up
+    render.rect_fade(vec2_t(pos.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100))  -- left side
+    render.rect_fade(vec2_t(pos.x + size.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100)) -- right side
+    render.arc(vec2_t(pos.x + rounding + 1, pos.y + rounding + 1), 172, 252, 20, rounding, 1, c:alpha(255)) -- left up
+    render.arc(vec2_t(pos.x + size.x - rounding, pos.y + rounding + 1), 270, 357, 20, rounding, 1, c:alpha(255)) -- right up
     render.arc(vec2_t(pos.x + rounding + 1, pos.y + size.y - rounding - 1), 88, 150, 20, rounding, 1, c:alpha(50)) -- left down
     render.arc(vec2_t(pos.x + size.x - rounding, pos.y + size.y - rounding - 1), 15, 98, 20, rounding, 1, c:alpha(50)) -- right down
     render.pop_alpha_modifier()

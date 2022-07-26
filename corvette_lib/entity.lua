@@ -141,8 +141,6 @@ do local jump_key = input.find_key_bound_to_binding("jump")
 lua_entity_t.get_movement_type = function(s)
     local velocity = s:get_velocity()
     local crouching = s:is_crouching()
-    if s:is_in_air() and crouching then
-        return "c-air" end
     if s:is_in_air() then
         return "air" end
     if s == entity_list.get_local_player() then
