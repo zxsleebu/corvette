@@ -1,3 +1,5 @@
+require("corvette_lib/globals")
+
 local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
 local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
 local ui_animations = {
@@ -244,7 +246,7 @@ do
         local pos = vec2_t(0, 11)
         local size = vec2_t(500, 19)
         local color = m_watermark_color:get()
-        
+
         local watermark_name = {"corv", "ette.lua"}
         local watermark_textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2])
         local watermark_text = {}
