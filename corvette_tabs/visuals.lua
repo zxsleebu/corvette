@@ -107,7 +107,7 @@ do
 
                     render.push_alpha_modifier(bindlist[i].anim)
                     render.text(widgets_font, name, pos + vec2_t(5, offset_y), color_t(255, 255, 255, 255))
-                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 4, offset_y), color_t(255, 255, 255, 255))
+                    render.text(widgets_font, mode, pos + vec2_t(math.ceil(ui_animations.widgets.binds.width) - render.get_text_size(widgets_font, mode).x - 3, offset_y), color_t(255, 255, 255, 255))
                     render.pop_alpha_modifier()
 
                     plus = plus + math.ceil(bindlist[i].anim * 100) / 100
