@@ -28,8 +28,8 @@ do
         }
     end
     local bind_ind = function(reference)
-        return function() 
-            return reference 
+        return function()
+            return reference
         end
     end
     local ragebot_tabs = {"auto", "scout", "awp", "deagle", "revolver", "pistols", "other"}
@@ -244,7 +244,7 @@ do
         local pos = vec2_t(500, 11)
         local size = vec2_t(500, 17)
         local color = m_watermark_color:get()
-        
+
         local latency = math.floor(engine.get_latency( e_latency_flows.OUTGOING ) * 999)
         local watermark_name = {"corv", "ette.lua"}
         local watermark_textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2])
@@ -263,9 +263,9 @@ do
 
         local textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2] .. text)
 
-       ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
-       size.x = math.ceil(ui_animations.widgets.water.width)
-       pos.x = ss.x - size.x - 11
+        ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
+        size.x = math.ceil(ui_animations.widgets.water.width)
+        pos.x = ss.x - size.x - 11
 
         render.solus_container(pos, size, color, 1, 3)
         render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 2), color_t(255, 255, 255))
