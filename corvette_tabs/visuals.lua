@@ -50,11 +50,13 @@ do
     end
 
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
+    local enable_glow = t_visuals.indicators:add_checkbox("enable glow on keybinds", false)
     local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
     local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
     local m_keybinds_x = t_visuals.indicators:add_slider("k_x", 0, ss.x)
     local m_keybinds_y = t_visuals.indicators:add_slider("k_y", 0, ss.y)
 
+    enable_glow:master(m_keybinds)
     m_keybinds_x:set_visible(false)
     m_keybinds_y:set_visible(false)
 
@@ -129,7 +131,7 @@ do
         size.x = math.ceil(ui_animations.widgets.binds.width)
 
         if ui_animations.widgets.binds.alpha > 0.08 then
-            render.solus_container(pos, size, color, ui_animations.widgets.binds.alpha, 3)
+            render.solus_container(pos, size, color, ui_animations.widgets.binds.alpha, 3, enable_glow:get())
             render.push_alpha_modifier(ui_animations.widgets.binds.alpha)
             render.text(widgets_font, text, pos + vec2_t(size.x / 2 - render.get_text_size(widgets_font, text).x / 2, 3), color_t(255, 255, 255, 255))
             render.pop_alpha_modifier()
@@ -204,6 +206,8 @@ end
 do
     local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
     local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local enable_glow = t_visuals.indicators:add_checkbox("enable glow on watermark", false)
+    enable_glow:master(m_watermark)
     local watermark_entry = function (name, text)
         return {
             name = name,
@@ -272,7 +276,7 @@ do
         size.x = math.ceil(ui_animations.widgets.water.width)
         pos.x = ss.x - size.x - 11
 
-        render.solus_container(pos, size, color, 1, 3)
+        render.solus_container(pos, size, color, 1, 3, enable_glow:get())
         render.multi_color_text(widgets_font, table_text, pos + vec2_t(5, 3), false, 1)
     end)
 end

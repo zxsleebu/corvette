@@ -91,7 +91,9 @@ end
 ---@param c color_t
 ---@param alpha number
 ---@param rounding number
-render.solus_container = function (pos, size, c, alpha, rounding)
+render.solus_container = function (pos, size, c, alpha, rounding, glow)
+    local o = 16
+
     render.push_alpha_modifier(alpha)
     render.rect_filled(vec2_t(pos.x + 1, pos.y + 1), vec2_t(size.x - 1, size.y - 2), color_t(17, 17, 17, c.a), rounding)
     render.rect_filled(vec2_t(pos.x + rounding, pos.y), vec2_t(size.x - rounding * 2, 1), c:alpha(255)) -- up line
@@ -103,6 +105,12 @@ render.solus_container = function (pos, size, c, alpha, rounding)
     render.arc(vec2_t(pos.x + rounding + 1, pos.y + size.y - rounding - 1), 88, 150, 20, rounding, 1, c:alpha(50)) -- left down
     render.arc(vec2_t(pos.x + size.x - rounding, pos.y + size.y - rounding - 1), 15, 98, 20, rounding, 1, c:alpha(50)) -- right down
     render.pop_alpha_modifier()
+    if glow then
+        for rad = 4, math.ceil(alpha * o) do
+            local radius = rad / 2
+            render.rect(pos - vec2_t(radius - 1, radius - 1), size + vec2_t(radius * 2 - 2, radius * 2 - 3), c:alpha(math.ceil((alpha * o) - radius * 2)), radius + 2)
+        end
+    end
 end
 
 ---@param pos vec3_t
