@@ -1,3 +1,5 @@
+require("corvette_lib/globals")
+
 local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
 local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
 local ui_animations = {
