@@ -137,8 +137,7 @@ lua_entity_t.get_abs_origin = function(s)
     return origin and origin or s:get_render_origin()
 end
 end
-do
-local jump_key = input.find_key_bound_to_binding("jump")
+do local jump_key = input.find_key_bound_to_binding("jump") ---@type e_keys
 ---@param s entity_t
 ---@return "stand"|"walk"|"move"|"air"|"crouch"|"fakeduck"|nil
 lua_entity_t.get_movement_type = function(s)

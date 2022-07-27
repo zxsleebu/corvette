@@ -220,7 +220,7 @@ do
         end),
         watermark_entry("tickrate", function()
             if not engine.is_connected() then return end
-            return string.format("%dtick",client.get_tickrate())
+            return string.format("%dtick", client.get_tickrate())
         end),
         watermark_entry("time", function()
             local hours, min, sec = client.get_local_time()
@@ -244,15 +244,19 @@ do
         local pos = vec2_t(0, 11)
         local size = vec2_t(500, 19)
         local color = m_watermark_color:get()
-        
         local watermark_name = {"corv", "ette.lua"}
-        local watermark_textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2])
         local watermark_text = {}
+        local table_text = {
+            {"corv", color_t(255, 255, 255, 255)},
+            {"ette.lua", color:alpha(255)},
+        }
         for i = 1, #watermark_entries do
             if m_features:get(i) then
                 local result = watermark_entries[i].text()
                 if result then
-                    table.insert(watermark_text, tostring(result)) end
+                    table.insert(watermark_text, tostring(result))
+                    table.insert(table_text, {"  " .. tostring(result), color_t(255, 255, 255, 255)})
+                end
             end
         end
         local text = table.concat(watermark_text, "  ")
@@ -267,14 +271,12 @@ do
         pos.x = ss.x - size.x - 11
 
         render.solus_container(pos, size, color, 1, 3)
-        render.text(widgets_font, watermark_name[1], pos + vec2_t(5, 3), color_t(255, 255, 255, 255))
-        render.text(widgets_font, watermark_name[2], pos + vec2_t(5 + render.get_text_size(widgets_font, watermark_name[1]).x, 3), color_t(color.r, color.g, color.b, 255))
-        render.text(widgets_font, text, pos + vec2_t(5 + watermark_textsize.x, 3), color_t(255, 255, 255, 255))
+        render.multi_color_text(widgets_font, table_text, pos + vec2_t(5, 3), false, 1)
     end)
 end
 
 do
-    local warning_font = render.create_font("Calibri", 38, 600, e_font_flags.ANTIALIAS)
+    local warning_font = render.create_font("Verdana", 32, 600, e_font_flags.ANTIALIAS)
     local m_slowed_down = t_visuals.indicators:add_checkbox("slowed down", true)
     local m_slowed_down_x = t_visuals.indicators:add_slider("sw_x", 0, ss.x)
     local m_slowed_down_y = t_visuals.indicators:add_slider("sw_y", 0, ss.y)
@@ -295,7 +297,7 @@ do
         local pos = vec2_t(m_slowed_down_x:get(), m_slowed_down_y:get())
         local lp = entity_list.get_local_player()
         local velmod = 1
-        local size = vec2_t(102, 11)
+        local size = vec2_t(98, 11)
 
         if lp and lp:is_alive() then
             velmod = lp:get_prop("m_flVelocityModifier")
@@ -305,24 +307,29 @@ do
 
         ui_animations.widgets.sdown.width = essentials.anim(ui_animations.widgets.sdown.width, velmod)
 
-        local alpha = math.sin(math.abs(-math.pi + (global_vars.real_time() * (1.2 / 1)) % (math.pi * 2)))
-        local text = "Slowed down " .. string.format("%d%%", velmod * 100)
+        local alpha = math.sin(math.abs(-math.pi + (global_vars.real_time() * (2 / 1)) % (math.pi)))
+        local text = "Slowed down!"
         local textsize = render.get_text_size(widgets_font, text)
         local color = color_mod(ui_animations.widgets.sdown.width)
         ui_animations.widgets.sdown.alpha = essentials.anim(ui_animations.widgets.sdown.alpha, (velmod < 1 or menu.is_open()) and 1 or 0)
 
         if ui_animations.widgets.sdown.alpha > 0.08 then
+            local size_process = math.ceil(size.x * (ui_animations.widgets.sdown.width * 100) / 100) - 1
+            local velsize = render.get_text_size(widgets_font, string.format("%d%%", velmod * 100)).x + 2
+            local size_x = size_process < math.ceil(velsize) and math.ceil(velsize) or size_process
+
             render.push_alpha_modifier(ui_animations.widgets.sdown.alpha)
-            render.rect_filled(pos + vec2_t(43, textsize.y + 12), vec2_t(size.x + 1, size.y + 1), color_t(17, 17, 17, 200), 0)
-            render.rect_filled(pos + vec2_t(43 + 1, textsize.y + 12 + 1), vec2_t(math.ceil(size.x * (ui_animations.widgets.sdown.width * 100) / 100) - 1, size.y - 1), color, 0)
+            render.rect_filled(pos + vec2_t(43, textsize.y + 5), vec2_t(size.x + 1, size.y + 1), color_t(17, 17, 17, 200), 0)
+            render.rect_filled(pos + vec2_t(43 + 1, textsize.y + 5 + 1), vec2_t(size_x, size.y - 1), color, 0)
 
-            render.text(widgets_font, text, pos + vec2_t(43, 12 - 1), color_t(255, 255, 255))
+            render.text(widgets_font, text, pos + vec2_t(44, 5 - 1), color_t(255, 255, 255))
+            render.text(widgets_font, string.format("%d%%", velmod * 100), pos + vec2_t(43 + size_x - render.get_text_size(widgets_font, string.format("%d%%", velmod * 100)).x, 17), color_t(255, 255, 255))
 
-            render.polygon({vec2_t(pos.x, pos.y + 37), vec2_t(pos.x + 20, pos.y), vec2_t(pos.x + 40, pos.y + 37)}, color_t(17, 17, 17, 200))
-            render.polygon({vec2_t(pos.x + 3, pos.y + 37 - 2), vec2_t(pos.x + 20, pos.y + 3), vec2_t(pos.x + 40 - 3, pos.y + 37 - 2)}, color:alpha(math.ceil(255 * alpha)))
-            render.text(warning_font, "!", pos + vec2_t(14, 2), color_t(17, 17, 17, math.ceil(255 * alpha)))
+            render.polygon({vec2_t(pos.x, pos.y + 35), vec2_t(pos.x + 20, pos.y), vec2_t(pos.x + 40, pos.y + 35)}, color_t(17, 17, 17, math.max(50, math.ceil(200 * alpha))))
+            render.polygon({vec2_t(pos.x + 4, pos.y + 35 - 2), vec2_t(pos.x + 20, pos.y + 5), vec2_t(pos.x + 40 - 4, pos.y + 35 - 2)}, color:alpha(math.max(50, math.ceil(255 * alpha))))
+            render.text(warning_font, "!", pos + vec2_t(14, 4), color_t(80, 80, 80, math.max(50, math.ceil(255 * alpha))))
             render.pop_alpha_modifier()
-            m_slowed_down_draggable:drag(vec2_t(146, 37))
+            m_slowed_down_draggable:drag(vec2_t(142, 35))
         end
     end)
 end
@@ -335,6 +342,7 @@ do
     m_maximum_count_logs:master(m_logs_under_crosshair)
 
     m_logs_under_crosshair:callback(e_callbacks.PAINT, function ()
+        if not engine.is_connected() then logs = {} return end
         local pos = vec2_t(ss.x / 2, ss.y / 1.48)
         local offset_y = 0
 
