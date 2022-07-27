@@ -333,7 +333,7 @@ do
 
             render.polygon({vec2_t(pos.x, pos.y + 35), vec2_t(pos.x + 20, pos.y), vec2_t(pos.x + 40, pos.y + 35)}, color_t(17, 17, 17, math.max(50, math.ceil(200 * alpha))))
             render.polygon({vec2_t(pos.x + 4, pos.y + 35 - 2), vec2_t(pos.x + 20, pos.y + 5), vec2_t(pos.x + 40 - 4, pos.y + 35 - 2)}, color:alpha(math.max(50, math.ceil(255 * alpha))))
-            render.text(warning_font, "!", pos + vec2_t(14, 4), color_t(80, 80, 80, math.max(50, math.ceil(255 * alpha))))
+            render.text(warning_font, "!", pos + vec2_t(14, 4), color_t(17, 17, 17, math.max(50, math.ceil(255 * alpha))))
             render.pop_alpha_modifier()
             m_slowed_down_draggable:drag(vec2_t(142, 35))
         end
