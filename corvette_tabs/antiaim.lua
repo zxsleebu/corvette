@@ -16,7 +16,7 @@ do
         desync.move.right_amount:set(99)
     end
     local roll = function()
-        if not essentials.get_exploit() or m_roll:get() then
+        if not essentials.get_exploit() and m_roll:get() then
             angles.yaw_add:set(0)
             angles.jitter_add:set(1)
             angles.jitter_mode:set(2)

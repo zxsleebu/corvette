@@ -375,25 +375,22 @@ do
         end
     end)
 
-    m_logs_under_crosshair:callback(e_callbacks.EVENT, function (event)
+     m_logs_under_crosshair:callback(e_callbacks.AIMBOT_HIT, function (hit)
         local lp = entity_list.get_local_player()
         if not lp or not lp:is_alive() then return end
-        if event.name ~= "player_hurt" then return end
-        if entity_list.get_player_from_userid(event.attacker) ~= lp then return end
 
         local color = m_accent_color:get()
-        local victim = entity_list.get_player_from_userid(event.userid)
         local text_table = {
             {"[", color_t(255, 255, 255, 255)},
             {"corvette.lua", color},
             {"] Hit ", color_t(255, 255, 255, 255)},
-            {tostring(victim:get_name()), color},
+            {tostring(hit.player:get_name()), color},
             {" in the ", color_t(255, 255, 255, 255)},
-            {hitgroups[event.hitgroup], color},
+            {hitgroups[hit.hitgroup], color},
             {" for ", color_t(255, 255, 255, 255)},
-            {tostring(event.dmg_health), color},
+            {tostring(hit.damage), color},
             {" damage (", color_t(255, 255, 255, 255)},
-            {tostring(event.health), color},
+            {tostring(hit.player:get_prop("m_iHealth")), color},
             {" health remaining)", color_t(255, 255, 255, 255)}
         }
 
@@ -434,7 +431,7 @@ do
     end)
 end
 
-do
+--[[ do
     local m_bullet_tracer = t_visuals.general:add_checkbox("local bullet tracer", true)
     local m_bullet_tracer_color = m_bullet_tracer:add_color_picker("color", color_t(255, 255, 255, 255))
     local m_bullet_tracer_timer = t_visuals.general:add_slider("tracer time", 1, 10)
@@ -458,7 +455,7 @@ do
             current_pos = nil
         end
     end)
-end
+end ]]
 
 local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
 local m_autopeek_color_stand = m_autopeek:add_color_picker("stand", color_t(255, 255, 255))
@@ -502,9 +499,7 @@ do
             a.fade = essentials.anim(a.fade, active and 255 or 0)
         end
     end)
-    m_autopeek:callback(e_callbacks.EVENT, function (event)
-        if event.name ~= "weapon_fire" then return end
-        if entity_list.get_player_from_userid(event.userid) ~= entity_list.get_local_player() then return end
+    m_autopeek:callback(e_callbacks.AIMBOT_SHOOT, function (shoot)
         shot = true
     end)
     m_autopeek:callback(e_callbacks.PAINT, function()
@@ -606,7 +601,7 @@ callbacks.add(e_callbacks.ANTIAIM, function(ctx)
 	if m_animfucker:get(1) then
 		ctx:set_render_pose(e_poses.RUN, 0)
 	end
-    if m_animfucker:get(4) and lp:get_velocity() > 3 then
+    if m_animfucker:get(4) and not ui.misc.main.movement.slow_walk:get() and lp:get_velocity() > 3 then
         ctx:set_render_animlayer(e_animlayers.LEAN, 1)
     end
     if m_animfucker:get(2) then
