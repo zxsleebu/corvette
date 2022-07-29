@@ -237,3 +237,46 @@ callbacks.add(e_callbacks.NET_UPDATE, function()
     if not lp or not lp:is_alive() then return end
     lp:save_lagrecord()
 end)
+
+do
+    ffi.cdef[[
+        typedef struct {
+            uint64_t unknown;
+            union {
+                uint64_t steamID64;
+                struct{
+                    uint32_t xuid_low;
+                    uint32_t xuid_high;
+                };
+            };
+            char            szName[128];      
+            int             userId;          
+            char            szSteamID[20];    
+            char            pad_0x00A8[0x10];  
+            unsigned long   iSteamID;           
+            char            szFriendsName[128];
+            bool            fakeplayer;
+            bool            ishltv;
+            unsigned int    customfiles[4];
+            unsigned char   filesdownloaded;
+        } player_info_t;
+    ]]
+    local get_player_info = IEngine:get_vfunc("bool(__thiscall*)(void*, int, player_info_t*)", 8)
+    ---@param s entity_t
+    ---@return {userid: number}|nil
+    lua_entity_t.get_info = function(s)
+        local info = ffi.new("player_info_t")
+        if get_player_info(s:get_index(), info) then
+            ---@diagnostic disable-next-line: undefined-field
+            return {userid = info.userId}
+        end
+    end
+end
+entity_list.get_player_from_userid = function(user_id)
+    local players = entity_list.get_players()
+    for i = 1, #players do
+        local info = players[i]:get_info()
+        if info and info.userid == user_id then
+            return players[i] end
+    end
+end

@@ -1,3 +1,4 @@
+require("corvette_lib/ffi")
 require("corvette_lib/essentials")
 require("corvette_lib/globals")
 require("corvette_lib/tabs")

@@ -17,3 +17,5 @@ set = function(elems)
     return t
 end
 clamp = function(val, min, max) return math.max(min, math.min(max, val)) end
+
+IEngine = ffp.create_interface("engine", "VEngineClient014")
