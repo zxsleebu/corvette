@@ -1,6 +1,5 @@
 require("corvette_lib/ui")
-local ffi = require("ffi")
-local bit = require("bit")
+require("corvette_lib/bit")
 ffi.cdef([[
     typedef struct{ float x; float y; float z; } Vector_t;
     typedef struct{ float x; float y; } Vector2_t;
