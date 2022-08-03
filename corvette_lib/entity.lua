@@ -272,11 +272,11 @@ do
         end
     end
 end
-entity_list.get_player_from_userid = function(user_id)
-    local players = entity_list.get_players()
-    for i = 1, #players do
-        local info = players[i]:get_info()
-        if info and info.userid == user_id then
-            return players[i] end
-    end
-end
+-- entity_list.get_player_from_userid = function(user_id)
+--     local players = entity_list.get_players()
+--     for i = 1, #players do
+--         local info = players[i]:get_info()
+--         if info and info.userid == user_id then
+--             return players[i] end
+--     end
+-- end
