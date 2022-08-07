@@ -53,6 +53,7 @@ vec3_mt.__div = function(a, b)
 ---@return boolean
 vec3_mt.__eq = function(a, b)
     return a.x == b.x and a.y == b.y and a.z == b.z end
+
 ---@param a vec3_t
 ---@param b vec3_t
 ---@param t number

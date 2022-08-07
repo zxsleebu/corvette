@@ -8,6 +8,7 @@ hitgroups = {
     [5] = "right arm",
     [6] = "left leg",
     [7] = "right leg",
+    [8] = "neck",
     [10] = "gear"
 }
 set = function(elems)

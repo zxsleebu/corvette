@@ -95,11 +95,11 @@ render.solus_container = function (pos, size, c, alpha, rounding, glow)
     local o = 16
 
     render.push_alpha_modifier(alpha)
-    render.rect_filled(vec2_t(pos.x + 1, pos.y + 1), vec2_t(size.x - 1, size.y - 2), color_t(17, 17, 17, c.a), rounding)
+    render.rect_filled(vec2_t(pos.x + 1, pos.y + 1), vec2_t(size.x - 1, size.y - 2), color_t(17, 17, 17, c.a), rounding + 0.1)
     render.rect_filled(vec2_t(pos.x + rounding, pos.y), vec2_t(size.x - rounding * 2, 1), c:alpha(255)) -- up line
     render.rect_filled(vec2_t(pos.x + rounding + 1, pos.y + size.y - 1), vec2_t(size.x - rounding * 2 - 2, 1), c:alpha(50)) -- down line
-    render.rect_fade(vec2_t(pos.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100))  -- left side
-    render.rect_fade(vec2_t(pos.x + size.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2), c:alpha(255), c:alpha(100)) -- right side
+    render.rect_fade(vec2_t(pos.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2 - 1), c:alpha(255), c:alpha(100))  -- left side
+    render.rect_fade(vec2_t(pos.x + size.x, pos.y + rounding + 1), vec2_t(1, size.y - rounding * 2 - 1), c:alpha(255), c:alpha(100)) -- right side
     render.arc(vec2_t(pos.x + rounding + 1, pos.y + rounding + 1), 172, 252, 20, rounding, 1, c:alpha(255)) -- left up
     render.arc(vec2_t(pos.x + size.x - rounding, pos.y + rounding + 1), 270, 357, 20, rounding, 1, c:alpha(255)) -- right up
     render.arc(vec2_t(pos.x + rounding + 1, pos.y + size.y - rounding - 1), 88, 150, 20, rounding, 1, c:alpha(50)) -- left down

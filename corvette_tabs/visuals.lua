@@ -10,6 +10,7 @@ local ui_animations = {
         water = {width = 1},
         binds = {width = 1, alpha = 0},
         sdown = {width = 1, alpha = 0},
+        antiaa = {flw = 1, fw = 1, exw = 1, exa = 0,},
     }
 }
 do
@@ -91,7 +92,7 @@ do
         local modes = {"[toggled]", "[holding]", "[holding off]", "[always]", "[disabled]"}
         local pos = vec2_t(m_keybinds_x:get(), m_keybinds_y:get())
         local resize = {width = 20, minwidth = 0}
-        local size = vec2_t(70, 19)
+        local size = vec2_t(70, 18)
         local color = m_keybinds_color:get()
         local text = "keybinds"
         local plus = 0
@@ -154,6 +155,7 @@ do
     }
 
     local m_indicators = t_visuals.indicators:add_checkbox("under crosshair", true)
+    local m_anim_speed = t_visuals.indicators:add_slider("anim speed", 10.0, 180.0, 0.1, 0.01)
     local m_indicators_first_color = m_indicators:add_color_picker("first_color", ui.misc.main.config.accent_color:get())
     local m_indicators_second_color = m_indicators:add_color_picker("second_color", color_t(0, 0, 0, 124))
 
@@ -161,8 +163,8 @@ do
         local lp = entity_list.get_local_player()
         if not lp or not lp:is_alive() then return end
         local pos = ss / 2 + vec2_t(0, 35)
-        local primary_color = m_indicators_first_color:get()
-        local secondary_color = m_indicators_second_color:get()
+        local secondary_color = m_indicators_first_color:get()
+        local primary_color = m_indicators_second_color:get()
         local m_text = "~corvette~"
         ui_animations.indicators.add_x = essentials.anim(ui_animations.indicators.add_x, lp:get_prop("m_bIsScoped") == 1 and 45 or 0)
 
@@ -174,7 +176,7 @@ do
             local m_letter_size = render.get_text_size(logo_font, m_letter)
 
             local alpha = idx / #m_text
-            local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * 1.4 % (math.pi * 2)))
+            local anim = math.sin(math.abs(-math.pi + (global_vars.real_time() + alpha) * (m_anim_speed:get() / 40) % (math.pi * 2)))
 
             local color = primary_color:fade(secondary_color, anim)
 
@@ -248,7 +250,7 @@ do
     m_watermark:callback(e_callbacks.PAINT, function ()
         m_show_seconds:set_visible(m_features:get(5))
         local pos = vec2_t(0, 11)
-        local size = vec2_t(500, 19)
+        local size = vec2_t(100, 18)
         local color = m_watermark_color:get()
         local watermark_name = {"corv", "ette.lua"}
         local watermark_text = {}
@@ -272,12 +274,194 @@ do
 
         local textsize = render.get_text_size(widgets_font, watermark_name[1] .. watermark_name[2] .. text)
 
-        ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 9)
+        ui_animations.widgets.water.width = essentials.anim(ui_animations.widgets.water.width, textsize.x + 7)
         size.x = math.ceil(ui_animations.widgets.water.width)
         pos.x = ss.x - size.x - 11
 
         render.solus_container(pos, size, color, 1, 3, enable_glow:get())
-        render.multi_color_text(widgets_font, table_text, pos + vec2_t(5, 3), false, 1)
+        render.multi_color_text(widgets_font, table_text, pos + vec2_t(4, 3), false, 1)
+    end)
+
+    local gram_create = function(value, count) local gram = { }; for i=1, count do gram[i] = value; end return gram; end
+    local gram_update = function(tab, value, forced) local new_tab = tab; if forced or new_tab[#new_tab] ~= value then table.insert(new_tab, value); table.remove(new_tab, 1); end; tab = new_tab; end
+    local get_average = function(tab) local elements, sum = 0, 0; for k, v in pairs(tab) do sum = sum + v; elements = elements + 1; end return sum / elements; end
+
+    local get_color = function(number, max, i)
+        local Colors = {
+            { 255, 0, 0 },
+            { 237, 27, 3 },
+            { 235, 63, 6 },
+            { 229, 104, 8 },
+            { 228, 126, 10 },
+            { 220, 169, 16 },
+            { 213, 201, 19 },
+            { 176, 205, 10 },
+            { 124, 195, 13 }
+        }
+
+        local math_num = function(int, max, declspec)
+            local int = (int > max and max or int)
+            local tmp = max / int;
+
+            if not declspec then declspec = max end
+
+            local i = (declspec / tmp)
+            i = (i >= 0 and math.floor(i + 0.5) or math.ceil(i - 0.5))
+
+            return i
+        end
+
+        i = math_num(number, max, #Colors)
+
+        return color_t(
+            Colors[i <= 1 and 1 or i][1],
+            Colors[i <= 1 and 1 or i][2],
+            Colors[i <= 1 and 1 or i][3],
+            i)
+    end
+
+    local m_anti_aimbot_indicaton = t_visuals.indicators:add_checkbox("anti-aimbot indication", true)
+    local m_anti_aimbot_color = m_anti_aimbot_indicaton:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local enable_glow = t_visuals.indicators:add_checkbox("enable glow on anti-aimbot", false)
+
+    local offset_y = {0, 0}
+    local anim_y = {0, 0}
+
+    local teleport_data = gram_create(0, 3)
+
+    local ind_phase, ind_num, ind_time = 0, 0, 0
+    local last_sent, current_choke = 0, 0
+    local teleport, last_origin = 0, vec3_t(0, 0, 0)
+    local breaking_lc = 0
+
+    local length2dsqr = function (s)
+        return math.sqrt(math.pow(s.x, 2) + math.pow(s.y, 2))
+    end
+
+    m_anti_aimbot_indicaton:callback(e_callbacks.SETUP_COMMAND, function(cmd)
+        if engine.get_choked_commands() == 0 then
+            local m_origin = entity_list.get_local_player():get_render_origin()
+
+            if last_origin ~= nil then
+                local delta = m_origin-last_origin
+                teleport = delta.x * delta.x + delta.y * delta.y
+
+                gram_update(teleport_data, teleport, true)
+            end
+
+            last_sent = current_choke
+            last_origin = m_origin
+        end
+
+        breaking_lc =
+            get_average(teleport_data) > 3200 and 1 or
+                (essentials.get_exploit(true) and 2 or 0)
+
+        current_choke = engine.get_choked_commands()
+    end)
+
+    m_anti_aimbot_indicaton:callback(e_callbacks.PAINT, function ()
+        local lp = entity_list.get_local_player()
+        if not lp or not lp:is_alive() then return end
+        -- Fakelag indicator
+        local pos = vec2_t(0, 11)
+        local flsize = vec2_t(100, 18)
+        local exsize = vec2_t(100, 18)
+        local color = m_anti_aimbot_color:get()
+
+        local addr = ""
+        if breaking_lc == 2 then
+            addr, ind_phase, ind_num = 'EXPLOITING', 0, 0
+        elseif ind_phase > 0.1 then
+            addr = 'dst: \x20\x20\x20\x20\x20\x20\x20\x20'
+        end
+
+        ui_animations.widgets.antiaa.exa = essentials.anim(ui_animations.widgets.antiaa.exa, addr ~= "" and 1 or 0)
+
+        local fr = global_vars.absolute_frame_time() * 3.75
+        local min_offset = 1200+math.max(0, get_average(teleport_data)-3800)
+        local teleport_mt = math.abs(math.min(teleport-3800, min_offset) / min_offset * 100)
+
+        if ind_num ~= teleport_mt and ind_time < global_vars.real_time() then
+            ind_time = global_vars.real_time() + 0.005
+            ind_num = ind_num + (ind_num > teleport_mt and -1 or 1)
+        end
+
+        ind_phase = ind_phase + (breaking_lc == 1 and fr or -fr)
+        ind_phase = ind_phase > 1 and 1 or ind_phase
+        ind_phase = ind_phase < 0 and 0 or ind_phase
+
+        local text = ("FL: %s"):format(
+            (function()
+                if tonumber(last_sent) < 10 then
+                    return '\x20\x20' .. last_sent
+                end
+
+                return last_sent
+            end)()
+        )
+
+        local textsize = render.get_text_size(widgets_font, text)
+        local extextsize = render.get_text_size(widgets_font, addr)
+
+        flsize.x = textsize.x + 7
+        exsize.x = extextsize.x + (addr == "" and 0 or 7)
+
+        ui_animations.widgets.antiaa.exw = essentials.anim(ui_animations.widgets.antiaa.exw, exsize.x + (addr == "" and 0 or 5))
+        ui_animations.widgets.antiaa.flw = essentials.anim(ui_animations.widgets.antiaa.flw, flsize.x)
+
+        flsize.x = math.round(ui_animations.widgets.antiaa.flw)
+
+        pos.x = ss.x - flsize.x - 11 - math.round(ui_animations.widgets.antiaa.exw)
+        pos.y = 11 + (23 * math.round((anim_y[1] * 100)) / 100)
+
+        render.solus_container(pos, flsize, color, 1, 3, enable_glow:get())
+        render.text(widgets_font, text, pos + vec2_t(4, 3), color_t(255, 255, 255))
+
+        if ui_animations.widgets.antiaa.exa > 0.01 then
+            local pos = vec2_t(0, 11)
+
+            exsize.x = math.round(ui_animations.widgets.antiaa.exw - (addr == "" and 0 or 5))
+            pos.x = ss.x - exsize.x - 11
+            pos.y = 11 + (23 * math.round((anim_y[1] * 100)) / 100)
+
+            render.solus_container(pos, exsize, color, ui_animations.widgets.antiaa.exa, 3, enable_glow:get())
+            render.text(widgets_font, addr, pos + vec2_t(4, 3), color_t(255, 255, 255):alpha(math.round(255 * ui_animations.widgets.antiaa.exa)))
+
+            if ind_phase > 0 then
+                render.rect_fade(pos + vec2_t(render.get_text_size(widgets_font, "dst:").x + 5, 7), vec2_t(math.min(100, ind_num) / 100 * 24, 6), color:alpha(math.round(255 * ui_animations.widgets.antiaa.exa)), color:alpha(0), true)
+            end
+        end
+
+        -- Fake indicator
+        local desync_angle = math.min(math.abs(antiaim.get_real_angle() - antiaim.get_fake_angle()), antiaim.get_max_desync_range())
+        local pos = vec2_t(0, 11)
+        local fsize = vec2_t(0, 18)
+
+        local text = ("FAKE (%.1f°)"):format(desync_angle)
+        local textsize = render.get_text_size(widgets_font, text)
+        fsize.x = textsize.x + 7
+
+        ui_animations.widgets.antiaa.fw = essentials.anim(ui_animations.widgets.antiaa.fw, fsize.x)
+
+        fsize.x = math.round(ui_animations.widgets.antiaa.fw)
+
+        pos.x = ss.x - (flsize.x + fsize.x + 5) - 11 - math.round(ui_animations.widgets.antiaa.exw)
+        pos.y = 11 + (23 * math.round((anim_y[1] * 100)) / 100)
+
+        render.solus_container(pos, fsize, color, 1, 3, enable_glow:get())
+        render.text(widgets_font, text, pos + vec2_t(4, 3), color_t(255, 255, 255))
+    end)
+
+    callbacks.add(e_callbacks.PAINT, function ()
+        local lp = entity_list.get_local_player()
+
+        offset_y[1] = m_watermark:get() and 1 or 0
+        offset_y[2] = (m_anti_aimbot_indicaton:get() and engine.is_connected() and lp ~= nil and lp:is_alive()) and 1 + offset_y[1] or 0
+
+        for i = 1, 2 do
+            anim_y[i] = essentials.anim(anim_y[i], offset_y[i])
+        end
     end)
 end
 
@@ -382,15 +566,15 @@ do
         local color = m_accent_color:get()
         local text_table = {
             {"[", color_t(255, 255, 255, 255)},
-            {"corvette.lua", color},
+            {"corvette.lua", color:alpha(255)},
             {"] Hit ", color_t(255, 255, 255, 255)},
-            {tostring(hit.player:get_name()), color},
+            {tostring(hit.player:get_name()), color:alpha(255)},
             {" in the ", color_t(255, 255, 255, 255)},
-            {hitgroups[hit.hitgroup], color},
+            {hitgroups[hit.hitgroup], color:alpha(255)},
             {" for ", color_t(255, 255, 255, 255)},
-            {tostring(hit.damage), color},
+            {tostring(hit.damage), color:alpha(255)},
             {" damage (", color_t(255, 255, 255, 255)},
-            {tostring(hit.player:get_prop("m_iHealth")), color},
+            {tostring(hit.player:get_prop("m_iHealth")), color:alpha(255)},
             {" health remaining)", color_t(255, 255, 255, 255)}
         }
 
@@ -412,6 +596,7 @@ do
     local hitchance = 0
     m_logs_under_crosshair:callback(e_callbacks.AIMBOT_SHOOT, function (shot) hitchance = shot.hitchance end)
     m_logs_under_crosshair:callback(e_callbacks.AIMBOT_MISS, function (miss)
+        if miss.player == nil then return end
         local color = miss_color(miss.reason_string)
         local text_table = {
             {"[", color_t(255, 255, 255, 255)},
