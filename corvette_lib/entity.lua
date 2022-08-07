@@ -1,6 +1,5 @@
 require("corvette_lib/ui")
-local ffi = require("ffi")
-local bit = require("bit")
+require("corvette_lib/bit")
 ffi.cdef([[
     typedef struct{ float x; float y; float z; } Vector_t;
     typedef struct{ float x; float y; } Vector2_t;
@@ -272,12 +271,11 @@ do
         end
     end
 end
-entity_list.get_player_from_userid = function(user_id)
-    local players = entity_list.get_entities_by_name("CCSPlayer")
-
-    for _, player_t in pairs(players) do
-        local info = player_t:get_info()
-        if info and info.userid == user_id then
-            return player_t end
-    end
-end
+-- entity_list.get_player_from_userid = function(user_id)
+--     local players = entity_list.get_players()
+--     for i = 1, #players do
+--         local info = players[i]:get_info()
+--         if info and info.userid == user_id then
+--             return players[i] end
+--     end
+-- end
