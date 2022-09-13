@@ -31,7 +31,6 @@ vec2_mt.__eq = function(a, b)
 ---@operator add(number|vec3_t): vec3_t
 ---@operator sub(number|vec3_t): vec3_t
 local vec3_mt = getmetatable(vec3_t())
----@class color_t
 local vec3_mt_ext = {}
 local operation3 = function(a, b, f)
     if type(b) == "number" then

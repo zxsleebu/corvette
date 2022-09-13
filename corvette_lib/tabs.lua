@@ -77,7 +77,7 @@ tabs = {
                 menu_name = tab.name .. " > " .. group,
             }
             setmetatable(tab.groups[g], tabs.__group_mt)
-            menu.set_group_column(tab.groups[g].menu_name, 2)
+            -- menu.set_group_column(tab.groups[g].menu_name, 2)
         end
         setmetatable(tab, tabs.__tab_mt)
         local elements = tabs.switcher:get_items()

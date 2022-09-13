@@ -1,6 +1,6 @@
 require("corvette_lib/globals")
 
-local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player"})
+local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player", "bullet tracer"})
 local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
 local ui_animations = {
     indicators = {
@@ -10,7 +10,7 @@ local ui_animations = {
         water = {width = 1},
         binds = {width = 1, alpha = 0},
         sdown = {width = 1, alpha = 0},
-        antiaa = {flw = 1, fw = 1, exw = 1, exa = 0,},
+        antiaa = {flw = 1, fw = 1, exw = 1, exa = 0, fk = 0},
     }
 }
 do
@@ -434,11 +434,11 @@ do
         end
 
         -- Fake indicator
-        local desync_angle = math.min(math.abs(antiaim.get_real_angle() - antiaim.get_fake_angle()), antiaim.get_max_desync_range())
+        ui_animations.widgets.antiaa.fk = essentials.anim(ui_animations.widgets.antiaa.fk, math.min(math.abs(antiaim.get_real_angle() - antiaim.get_fake_angle()), antiaim.get_max_desync_range()))
         local pos = vec2_t(0, 11)
         local fsize = vec2_t(0, 18)
 
-        local text = ("FAKE (%.1f°)"):format(desync_angle)
+        local text = ("FAKE (%.1f°)"):format(ui_animations.widgets.antiaa.fk)
         local textsize = render.get_text_size(widgets_font, text)
         fsize.x = textsize.x + 7
 
@@ -565,9 +565,10 @@ do
 
         local color = m_accent_color:get()
         local text_table = {
-            {"[", color_t(255, 255, 255, 255)},
-            {"corvette.lua", color:alpha(255)},
-            {"] Hit ", color_t(255, 255, 255, 255)},
+            -- {"[", color_t(255, 255, 255, 255)},
+            -- {"corvette.lua", color:alpha(255)},
+            -- {"] Hit ", color_t(255, 255, 255, 255)},
+            {"hit ", color_t(255, 255, 255, 255)},
             {tostring(hit.player:get_name()), color:alpha(255)},
             {" in the ", color_t(255, 255, 255, 255)},
             {hitgroups[hit.hitgroup], color:alpha(255)},
@@ -599,9 +600,10 @@ do
         if miss.player == nil then return end
         local color = miss_color(miss.reason_string)
         local text_table = {
-            {"[", color_t(255, 255, 255, 255)},
-            {"corvette.lua", color},
-            {"] Missed ", color_t(255, 255, 255, 255)},
+            -- {"[", color_t(255, 255, 255, 255)},
+            -- {"corvette.lua", color},
+            -- {"] Missed ", color_t(255, 255, 255, 255)},
+            {"missed ", color_t(255, 255, 255, 255)},
             {tostring(miss.player:get_name()), color},
             {"'s ", color_t(255, 255, 255, 255)},
             {hitgroups[miss.aim_hitgroup], color},
@@ -616,31 +618,41 @@ do
     end)
 end
 
---[[ do
-    local m_bullet_tracer = t_visuals.general:add_checkbox("local bullet tracer", true)
+do
+    local m_bullet_tracer = t_visuals.bullet_tracer:add_checkbox("local bullet tracer", true)
     local m_bullet_tracer_color = m_bullet_tracer:add_color_picker("color", color_t(255, 255, 255, 255))
-    local m_bullet_tracer_timer = t_visuals.general:add_slider("tracer time", 1, 10)
+    local m_bullet_tracer_timer = t_visuals.bullet_tracer:add_slider("tracer time", 1, 10)
     m_bullet_tracer_timer:master(m_bullet_tracer)
-    local current_pos
+    local last_impact_pos
+    local last_eye_pos
     m_bullet_tracer:callback(e_callbacks.EVENT, function (event)
         if event.name == "bullet_impact" then
             local lp = entity_list.get_local_player()
             if not lp or not lp:is_alive() then return end
             if entity_list.get_player_from_userid(event.userid) ~= lp then return end
             local pos = vec3_t(event.x, event.y, event.z)
-            current_pos = pos
+            last_impact_pos = pos
+            -- last_eye_pos = lp:get_eye_position()
         end
     end)
 
     m_bullet_tracer:callback(e_callbacks.SETUP_COMMAND, function (cmd)
         local lp = entity_list.get_local_player()
-        if not lp or not lp:is_alive() then current_pos = nil return end
-        if current_pos ~= nil then
-            debug_overlay.add_line(lp:get_eye_position(), current_pos, m_bullet_tracer_color:get(), true, m_bullet_tracer_timer:get())
-            current_pos = nil
+        cmd = cmd ---@type user_cmd_t
+        if not lp or not lp:is_alive() then last_impact_pos = nil return end
+        if last_impact_pos ~= nil and last_eye_pos ~= nil then
+            debug_overlay.add_line(last_eye_pos, last_impact_pos, m_bullet_tracer_color:get(), true, m_bullet_tracer_timer:get())
+            last_impact_pos = nil
         end
     end)
-end ]]
+
+    m_bullet_tracer:callback(e_callbacks.FINISH_COMMAND, function (cmd)
+        local lp = entity_list.get_local_player()
+        if not lp or not lp:is_alive() then last_impact_pos = nil return end
+        if not cmd:has_button(e_cmd_buttons.ATTACK) then return end
+        last_eye_pos = lp:get_eye_position()
+    end)
+end
 
 local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
 local m_autopeek_color_stand = m_autopeek:add_color_picker("stand", color_t(255, 255, 255))
