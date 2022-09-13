@@ -16,13 +16,13 @@ essentials = {
     ---@param only_charged boolean|nil
     ---@return "dt"|"hs"|false
     get_exploit = function(only_charged)
-        if ui.antiaim.main.general.fake_duck:get() then
+        if ui.antiaim.main.general.fake_duck[2]:get() then
             return false end
         if only_charged and exploits.get_charge() < 0 then
             return false end
-        if ui.aimbot.general.exploits.doubletap:get() then
+        if ui.aimbot.general.exploits.doubletap[2]:get() then
             return "dt" end
-        if ui.aimbot.general.exploits.hideshots:get() then
+        if ui.aimbot.general.exploits.hideshots[2]:get() then
             return "hs" end
         return false
     end,

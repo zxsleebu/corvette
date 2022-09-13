@@ -3,9 +3,9 @@ local get_name = function(name)
 local prepare_elements = function(tab, subtab)
     for group_name, _ in pairs(ui[tab][subtab]) do
         for element_name, _ in pairs(ui[tab][subtab][group_name]) do
-            local elem = menu.find(tab, subtab, (group_name == "auto_direction" or group_name == "fake_ping" or group_name == "extended_angles") and get_name(group_name) or group_name, get_name(element_name))
+            local elem = menu.find(tab, subtab, get_name(group_name), get_name(element_name))
             ---@diagnostic disable-next-line: need-check-nil
-            ui[tab][subtab][group_name][element_name] = elem[2] or elem[1] or elem
+            ui[tab][subtab][group_name][element_name] = elem
         end
     end
 end
@@ -80,6 +80,16 @@ ui = {
             },
         }
     },
+    visuals = {
+        other = {
+            bullet_tracers = {
+                ---@type checkbox_t
+                local_hits = 0,
+                ---@type checkbox_t
+                local_misses = 0,
+            }
+        }
+    },
     misc = {
         main = {
             movement = {
@@ -112,3 +122,4 @@ prepare_elements("aimbot", "general")
 prepare_elements("antiaim", "main")
 prepare_elements("misc", "main")
 prepare_elements("misc", "utility")
+prepare_elements("visuals", "other")

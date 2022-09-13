@@ -1,6 +1,6 @@
 require("corvette_lib/globals")
 
-local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player", "bullet tracer"})
+local t_visuals = tabs.new("visuals", {"general", "indicators", "esp", "local player", "hit visuals"})
 local widgets_font = render.create_font("Verdana", 12, 200, e_font_flags.DROPSHADOW)
 local ui_animations = {
     indicators = {
@@ -52,7 +52,7 @@ do
 
     local m_keybinds = t_visuals.indicators:add_checkbox("keybinds", true)
     local enable_glow = t_visuals.indicators:add_checkbox("enable glow on keybinds", false)
-    local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local m_keybinds_color = m_keybinds:add_color_picker("accent_color", ui.misc.main.config.accent_color[1]:get())
     local m_keybinds_min_width = t_visuals.indicators:add_slider("minimum width", 70, 300):master(m_keybinds)
     local m_keybinds_x = t_visuals.indicators:add_slider("k_x", 0, ss.x)
     local m_keybinds_y = t_visuals.indicators:add_slider("k_y", 0, ss.y)
@@ -100,10 +100,10 @@ do
 
         for i = 1, #bindlist do
             local condition = bindlist[i].reference()
-            if condition ~= nil then
-                local active = condition:get()
+            if condition ~= nil and condition[2] ~= nil then
+                local active = condition[2]:get()
                 local name = bindlist[i].name
-                local mode = modes[condition:get_mode() + 1]
+                local mode = modes[condition[2]:get_mode() + 1]
                 bindlist[i].anim = essentials.anim(bindlist[i].anim, active and 1 or 0, 20)
                 if active then h[#h+1] = i end
 
@@ -156,7 +156,7 @@ do
 
     local m_indicators = t_visuals.indicators:add_checkbox("under crosshair", true)
     local m_anim_speed = t_visuals.indicators:add_slider("anim speed", 10.0, 180.0, 0.1, 0.01)
-    local m_indicators_first_color = m_indicators:add_color_picker("first_color", ui.misc.main.config.accent_color:get())
+    local m_indicators_first_color = m_indicators:add_color_picker("first_color", ui.misc.main.config.accent_color[1]:get())
     local m_indicators_second_color = m_indicators:add_color_picker("second_color", color_t(0, 0, 0, 124))
 
     m_indicators:callback(e_callbacks.PAINT, function ()
@@ -189,7 +189,7 @@ do
         for i = 1, #indicators do
             local ind = indicators[i]
             local condition = ind.condition()
-            local active = condition and condition:get()
+            local active = condition and condition[2] and condition[2]:get()
             local name = type(ind.name) == "function" and ind.name() or ind.name
             local size = render.get_text_size(text_font, name)
 
@@ -207,7 +207,7 @@ do
 end
 do
     local m_watermark = t_visuals.indicators:add_checkbox("watermark", true)
-    local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local m_watermark_color = m_watermark:add_color_picker("accent_color", ui.misc.main.config.accent_color[1]:get())
     local enable_glow = t_visuals.indicators:add_checkbox("enable glow on watermark", false)
     enable_glow:master(m_watermark)
     local watermark_entry = function (name, text)
@@ -321,7 +321,7 @@ do
     end
 
     local m_anti_aimbot_indicaton = t_visuals.indicators:add_checkbox("anti-aimbot indication", true)
-    local m_anti_aimbot_color = m_anti_aimbot_indicaton:add_color_picker("accent_color", ui.misc.main.config.accent_color:get())
+    local m_anti_aimbot_color = m_anti_aimbot_indicaton:add_color_picker("accent_color", ui.misc.main.config.accent_color[1]:get())
     local enable_glow = t_visuals.indicators:add_checkbox("enable glow on anti-aimbot", false)
 
     local offset_y = {0, 0}
@@ -619,9 +619,9 @@ do
 end
 
 do
-    local m_bullet_tracer = t_visuals.bullet_tracer:add_checkbox("local bullet tracer", true)
+    local m_bullet_tracer = t_visuals.hit_visuals:add_checkbox("local bullet tracer")
     local m_bullet_tracer_color = m_bullet_tracer:add_color_picker("color", color_t(255, 255, 255, 255))
-    local m_bullet_tracer_timer = t_visuals.bullet_tracer:add_slider("tracer time", 1, 10)
+    local m_bullet_tracer_timer = t_visuals.hit_visuals:add_slider("tracer time", 1, 10, 0.25, 1)
     m_bullet_tracer_timer:master(m_bullet_tracer)
     local last_impact_pos
     local last_eye_pos
@@ -632,13 +632,13 @@ do
             if entity_list.get_player_from_userid(event.userid) ~= lp then return end
             local pos = vec3_t(event.x, event.y, event.z)
             last_impact_pos = pos
-            -- last_eye_pos = lp:get_eye_position()
         end
     end)
 
     m_bullet_tracer:callback(e_callbacks.SETUP_COMMAND, function (cmd)
+        ui.visuals.other.bullet_tracers.local_hits[1]:set(false)
+        ui.visuals.other.bullet_tracers.local_misses[1]:set(false)
         local lp = entity_list.get_local_player()
-        cmd = cmd ---@type user_cmd_t
         if not lp or not lp:is_alive() then last_impact_pos = nil return end
         if last_impact_pos ~= nil and last_eye_pos ~= nil then
             debug_overlay.add_line(last_eye_pos, last_impact_pos, m_bullet_tracer_color:get(), true, m_bullet_tracer_timer:get())
@@ -648,9 +648,30 @@ do
 
     m_bullet_tracer:callback(e_callbacks.FINISH_COMMAND, function (cmd)
         local lp = entity_list.get_local_player()
-        if not lp or not lp:is_alive() then last_impact_pos = nil return end
+        if not lp or not lp:is_alive() then return end
         if not cmd:has_button(e_cmd_buttons.ATTACK) then return end
         last_eye_pos = lp:get_eye_position()
+    end)
+end
+
+do
+    local m_hit_marker = t_visuals.hit_visuals:add_checkbox("hit marker", true)
+    local m_hit_marker_color = m_hit_marker:add_color_picker("color", color_t(0, 255, 0))
+    local m_hit_marker_style = t_visuals.hit_visuals:add_selection("style", {"default", "diagonal"}):master(m_hit_marker)
+    local m_hit_marker_size = t_visuals.hit_visuals:add_slider("size", 2, 5)
+    m_hit_marker:callback(e_callbacks.WORLD_HITMARKER, function(pos, w2s, alpha)
+        pos = pos ---@type vec2_t
+        render.push_alpha_modifier(alpha)
+        local col, style, s = m_hit_marker_color:get(), m_hit_marker_style:get(), m_hit_marker_size:get()
+        if style == 1 then
+            render.line(pos - vec2_t(0, s), pos + vec2_t(0, s), col)
+            render.line(pos - vec2_t(s, 0), pos + vec2_t(s, 0), col)
+        else
+            render.line(pos - vec2_t(s, s), pos + vec2_t(s, s), col)
+            render.line(pos - vec2_t(-s, s), pos + vec2_t(-s, s), col)
+        end
+        render.pop_alpha_modifier()
+        return true
     end)
 end
 
@@ -658,11 +679,12 @@ local m_autopeek = t_visuals.general:add_checkbox("autopeek", true)
 local m_autopeek_color_stand = m_autopeek:add_color_picker("stand", color_t(255, 255, 255))
 local m_autopeek_color_return = m_autopeek:add_color_picker("return", color_t(223, 255, 143))
 local m_autopeek_style = t_visuals.general:add_selection("style", {"neverlose", "gamesex"}):master(m_autopeek)
+local m_autopeek_anims = t_visuals.general:add_multi_selection("anims", {"alpha", "radius", "color"}):master(m_autopeek)
 local m_autopeek_radius = t_visuals.general:add_slider("radius", 10, 30):master(m_autopeek)
 do
-    local col = ui.aimbot.general.misc.autopeek_mode:get()
+    local col = ui.aimbot.general.misc.autopeek_mode[2]:get()
     m_autopeek_color_stand:set(col:alpha(m_autopeek_color_stand:get().a))
-    ui.aimbot.general.misc.autopeek_mode:set(col:alpha(0))
+    ui.aimbot.general.misc.autopeek_mode[2]:set(col:alpha(0))
 end
 do
     local autopeeks = {}
@@ -694,6 +716,7 @@ do
                 active, shot = false, false
             end
             a.fade = essentials.anim(a.fade, active and 255 or 0)
+            a.retreating = active
         end
     end)
     m_autopeek:callback(e_callbacks.AIMBOT_SHOOT, function (shoot)
@@ -713,6 +736,7 @@ do
                     if lp:get_render_origin():dist(a.pos) < 20 then
                         shot = false end
                     a.fade = essentials.anim(a.fade, shot and 255 or 0)
+                    a.retreating = shot
                 end
             end
         end
@@ -740,12 +764,25 @@ do
                     included = true end
                 a.alpha = essentials.anim(a.alpha, a.active and 255 or 0)
                 a.radius = essentials.anim(a.radius, a.active and radius or 0)
-                local col = col_stand:fade(col_return, a.fade / 255)
+                local alp, rad, fade = a.alpha, a.radius, a.fade
+                local anims = {
+                    m_autopeek_anims:get(1),
+                    m_autopeek_anims:get(2),
+                    m_autopeek_anims:get(3),
+                }
+                if not anims[1] then alp = 255 end
+                if not anims[2] then rad = radius end
+                if not anims[3] then fade = a.retreating and 255 or 0 end
+                if not anims[1] and not anims[2] and not a.active then
+                    table.remove(autopeeks, i)
+                    return
+                end
+                local col = col_stand:fade(col_return, fade / 255)
                 render_circle(a.pos,
                     50,
-                    math.ceil(a.radius * 10) / 10,
-                    col:alpha(math.ceil(a.alpha / 3)),
-                    col:alpha(math.ceil(a.alpha))
+                    math.ceil(rad * 10) / 10,
+                    col:alpha(math.ceil(alp / 3)),
+                    col:alpha(math.ceil(alp))
                 )
                 if a.alpha <= 1 or a.radius <= 1 then
                     table.remove(autopeeks, i) end
@@ -798,7 +835,7 @@ callbacks.add(e_callbacks.ANTIAIM, function(ctx)
 	if m_animfucker:get(1) then
 		ctx:set_render_pose(e_poses.RUN, 0)
 	end
-    if m_animfucker:get(4) and not ui.misc.main.movement.slow_walk:get() and lp:get_velocity() > 3 then
+    if m_animfucker:get(4) and not ui.misc.main.movement.slow_walk[2]:get() and lp:get_velocity() > 3 then
         ctx:set_render_animlayer(e_animlayers.LEAN, 1)
     end
     if m_animfucker:get(2) then
