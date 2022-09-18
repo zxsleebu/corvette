@@ -29,20 +29,24 @@ local element_t = {
 ---@class multi_selection_t : element_t
 ---@class selection_t : element_t
 
+---@class group_t
+---@field add_checkbox fun(self: group_t, name: string, default_value?: boolean): checkbox_t
+---@field add_slider fun(self: group_t, name: string, min: number, max: number, step?: number, precision?: number, suffix?: string): slider_t
+---@field add_list fun(self: group_t, name: string, items: string[], visible_items?: number): list_t
+---@field add_text_input fun(self: group_t, name: string): text_input_t
+---@field add_separator fun(self: group_t)
+---@field add_button fun(self: group_t, name: string, callback: fun(...)): button_t
+---@field add_multi_selection fun(self: group_t, name: string, items: string[], visible_items?: number): multi_selection_t
+---@field add_selection fun(self: group_t, name: string, items: string[], visible_items?: number): selection_t
+---@field add_text fun(self: group_t, name: string): text_t
+
 ---@class tab_t
----@field add_checkbox fun(self: tab_t, name: string, default_value?: boolean): checkbox_t
----@field add_slider fun(self: tab_t, name: string, min: number, max: number, step?: number, precision?: number, suffix?: string): slider_t
----@field add_list fun(self: tab_t, name: string, items: string[], visible_items?: number): list_t
----@field add_text_input fun(self: tab_t, name: string): text_input_t
----@field add_separator fun(self: tab_t)
----@field add_button fun(self: tab_t, name: string, callback: fun(...)): button_t
----@field add_multi_selection fun(self: tab_t, name: string, items: string[], visible_items?: number): multi_selection_t
----@field add_selection fun(self: tab_t, name: string, items: string[], visible_items?: number): selection_t
----@field add_text fun(self: tab_t, name: string): text_t
+---@field add_group fun(self: tab_t, name: string): group_t
 tabs = {
     list = {},
     __group_mt = {
         __index = function(s, name)
+            local raw = rawget(s, name)
             if name:sub(1, 4) == "add_" then
                 return function(group, elem_name, ...)
                     local elem = elements.new(menu[name](group.menu_name, elem_name, ...), name:sub(5))
@@ -51,33 +55,56 @@ tabs = {
                     return elem
                 end
             end
+            if raw then
+                return raw
+            end
         end,
     },
     __tab_mt = {
+        __rawindex = {
+            add_group = function(s, name)
+                local new_group = tabs.__new_group(s, name)
+                s.groups[new_group.key] = new_group
+                setmetatable(s.groups[new_group.key], tabs.__group_mt)
+                return s.groups[new_group.key]
+            end,
+        },
         __index = function(s, name)
             local group = s.groups[name]
             if group then return group end
+            local func = rawget(tabs.__tab_mt.__rawindex, name)
+            if func then return func end
             return rawget(s, name)
         end,
     },
+    __new_group = function(tab, group)
+        local key = group:gsub(" ", "_")
+        return
+        ---@class group_t
+        {
+            name = group,
+            elements = {},
+            tab = tab,
+            menu_name = tab.name .. " > " .. group,
+            skip_visibility = false,
+            key = key,
+        }
+    end,
     ---@param name string
     ---@param groups string[]
-    ---@return table<string, tab_t>
+    ---@return table<string, group_t>|tab_t
     new = function(name, groups)
-        local tab = {
+        local tab = 
+        ---@class tab_t
+        {
             name = name,
             groups = {},
+            index = #tabs.list+1
         }
         for _, group in ipairs(groups) do
-            local g = group:gsub(" ", "_")
-            tab.groups[g] = {
-                name = group,
-                elements = {},
-                tab = tab,
-                menu_name = tab.name .. " > " .. group,
-            }
-            setmetatable(tab.groups[g], tabs.__group_mt)
-            -- menu.set_group_column(tab.groups[g].menu_name, 2)
+            local new_group = tabs.__new_group(tab, group)
+            tab.groups[new_group.key] = new_group
+            setmetatable(tab.groups[new_group.key], tabs.__group_mt)
         end
         setmetatable(tab, tabs.__tab_mt)
         local elements = tabs.switcher:get_items()
@@ -101,7 +128,9 @@ tabs = {
         for i = 1, #tabs.list do
             local visibility = i == (active)
             for _, group in pairs(tabs.list[i].groups) do
-                menu.set_group_visibility(group.menu_name, visibility)
+                if not group.skip_visibility then
+                    menu.set_group_visibility(group.menu_name, visibility)
+                end
             end
         end
     end

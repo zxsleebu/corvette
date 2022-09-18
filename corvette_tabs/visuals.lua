@@ -46,7 +46,7 @@ do
             if not weapon then return end
             local el = menu.find("aimbot", weapon, "target overrides", name)
             if not el then return end
-            return el[2]
+            return el
         end
     end
 
