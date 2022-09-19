@@ -41,6 +41,7 @@ local add_state = function(group, name)
         s.desync:set_visible(enable and not desync_jitter)
         s.desync_left:set_visible(enable and desync_jitter)
         s.desync_right:set_visible(enable and desync_jitter)
+        s.jitter_type:set_visible(enable)
         s.jitter_offset:set_visible(enable and s.jitter_type:get() ~= 1)
     end)
     antiaim_settings[name] = s
