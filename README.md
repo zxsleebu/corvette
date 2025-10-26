@@ -1,3 +1,3 @@
 Complex script for primordial.dev
 
-Outdated since 2023
+Outdated since 2022
